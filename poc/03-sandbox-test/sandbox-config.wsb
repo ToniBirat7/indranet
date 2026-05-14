@@ -1,0 +1,18 @@
+<Configuration>
+  <!-- Enable GPU paravirtualization (DirectX access inside sandbox) -->
+  <VGpu>Enable</VGpu>
+  <!-- Enable network access for downloading test tools inside sandbox -->
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <!-- Replace this path with your actual session assets directory -->
+    <MappedFolder>
+      <HostFolder>C:\IndraNet\Sessions\poc-test\assets</HostFolder>
+      <SandboxFolder>C:\SessionAssets</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <!-- Start the session application after sandbox boots -->
+    <Command>C:\SessionAssets\start.bat</Command>
+  </LogonCommand>
+</Configuration>

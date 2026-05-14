@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IndraNet PoC 04 — Payment Gate</title>
+<style>
+  body { background: #0a0a0a; color: #eee; font-family: monospace; margin: 40px auto; max-width: 600px; }
+  h1 { color: #7c3aed; }
+  button { background: #7c3aed; color: white; border: none; padding: 12px 24px; cursor: pointer; font-size: 16px; border-radius: 4px; }
+  button:hover { background: #6d28d9; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 8px; margin: 20px 0; }
+  .success { border-color: #16a34a; }
+  .error { border-color: #dc2626; }
+  #token { word-break: break-all; font-size: 11px; background: #0f0f0f; padding: 8px; }
+  input { background: #222; color: #eee; border: 1px solid #444; padding: 8px; width: 100%; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<h1>IndraNet PoC 04 — Payment Gate</h1>
+
+<div class="card">
+  <h3>Step 1: Pay $1 to access the stream</h3>
+  <p>Uses Stripe test mode. No real money charged.</p>
+  <label>Server URL: <input id="serverUrl" value="http://localhost:8080"></label>
+  <br><br>
+  <button id="payBtn" onclick="startCheckout()">Pay $1 to Connect</button>
+</div>
+
+<div class="card" id="tokenCard" style="display:none">
+  <h3>Step 2: Enter your stream token</h3>
+  <p>After payment, paste the token from the server logs (TODO: auto-delivery via webhook).</p>
+  <input id="tokenInput" placeholder="Paste JWT token here...">
+  <br><br>
+  <button onclick="verifyToken()">Verify Token & Connect</button>
+</div>
+
+<div class="card success" id="successCard" style="display:none">
+  <h3>Access Granted!</h3>
+  <p>Session ID: <strong id="sessionId"></strong></p>
+  <p>Signaling URL: <span id="signalingUrl"></span></p>
+  <p style="color: #16a34a;">Ready to connect to WebRTC stream (see PoC 02)</p>
+</div>
+
+<div class="card error" id="errorCard" style="display:none">
+  <h3>Error</h3>
+  <p id="errorMsg"></p>
+</div>
+
+<script>
+async function startCheckout() {
+  const serverUrl = document.getElementById('serverUrl').value;
+  document.getElementById('payBtn').disabled = true;
+
+  try {
+    const response = await fetch(`${serverUrl}/create-checkout`, { method: 'POST' });
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+    const data = await response.json();
+    console.log('Checkout session created:', data);
+
+    // Show token input for manual flow (webhook auto-delivery not implemented in PoC)
+    document.getElementById('tokenCard').style.display = 'block';
+
+    // Redirect to Stripe Checkout
+    window.location.href = data.checkout_url;
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    document.getElementById('payBtn').disabled = false;
+  }
+}
+
+async function verifyToken() {
+  const serverUrl = document.getElementById('serverUrl').value;
+  const token = document.getElementById('tokenInput').value.trim();
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${serverUrl}/verify?token=${encodeURIComponent(token)}`);
+    if (response.status === 401) throw new Error('Invalid or expired token');
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+    const data = await response.json();
+    document.getElementById('sessionId').textContent = data.session_id;
+    document.getElementById('signalingUrl').textContent = data.signaling_url;
+    document.getElementById('successCard').style.display = 'block';
+    document.getElementById('errorCard').style.display = 'none';
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorCard').style.display = 'block';
+}
+
+// Show token input if returning from Stripe checkout (URL has session_id param)
+if (new URLSearchParams(window.location.search).get('session_id')) {
+  document.getElementById('tokenCard').style.display = 'block';
+  document.getElementById('tokenCard').querySelector('p').textContent =
+    'Payment confirmed! Check server logs for your JWT token (webhook auto-delivery coming in Phase 1).';
+}
+</script>
+</body>
+</html>

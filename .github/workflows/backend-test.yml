@@ -1,0 +1,51 @@
+name: Backend Tests
+
+on:
+  push:
+    paths:
+      - 'packages/backend/**'
+  pull_request:
+    paths:
+      - 'packages/backend/**'
+
+jobs:
+  test:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: indranet_test
+          POSTGRES_USER: indranet
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: packages/backend/go.sum
+      - name: Run tests with race detector
+        working-directory: packages/backend
+        env:
+          DATABASE_URL: postgres://indranet:testpassword@localhost:5432/indranet_test?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-do-not-use-in-production
+        run: go test -v -race -count=1 ./...

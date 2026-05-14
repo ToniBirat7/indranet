@@ -1,0 +1,76 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/packages/backend/bin/
+/packages/backend/tmp/
+
+# C++ build artifacts
+build/
+cmake-build-*/
+*.o
+*.a
+*.lib
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Rust / Tauri
+target/
+packages/client/src-tauri/target/
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+.turbo/
+packages/web/.next/
+packages/web/out/
+packages/client/dist/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Tauri build output
+packages/client/src-tauri/gen/
+packages/client/src-tauri/WixTools/
+*.dmg
+*.deb
+*.AppImage
+*.msi
+
+# Test coverage
+coverage/
+*.coverprofile
+
+# Python (research scripts)
+__pycache__/
+*.pyc
+.venv/
+
+# Logs
+*.log
+logs/
+
+# Compiled binaries in poc
+poc/*/build/
+poc/*/bin/

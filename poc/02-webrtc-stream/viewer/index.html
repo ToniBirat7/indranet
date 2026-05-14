@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IndraNet PoC 02 — WebRTC Viewer</title>
+<style>
+  body { background: #0a0a0a; color: #eee; font-family: monospace; margin: 20px; }
+  h1 { color: #7c3aed; }
+  video { width: 100%; max-width: 1280px; background: #1a1a1a; border: 1px solid #333; }
+  #stats { background: #111; padding: 10px; margin-top: 10px; border-left: 3px solid #7c3aed; }
+  input { background: #222; color: #eee; border: 1px solid #444; padding: 6px; margin-right: 8px; }
+  button { background: #7c3aed; color: white; border: none; padding: 8px 16px; cursor: pointer; }
+  button:hover { background: #6d28d9; }
+  #log { background: #0f0f0f; border: 1px solid #222; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>IndraNet PoC 02 — WebRTC Viewer</h1>
+
+<div>
+  <input id="serverUrl" value="ws://localhost:8765/signal" placeholder="Signaling server URL" size="40">
+  <input id="roomId" value="test123" placeholder="Room ID" size="15">
+  <button onclick="connect()">Connect</button>
+  <button onclick="disconnect()">Disconnect</button>
+</div>
+
+<br>
+<video id="video" autoplay playsinline muted></video>
+
+<div id="stats">
+  <strong>Stats</strong><br>
+  State: <span id="iceState">disconnected</span><br>
+  Frames decoded: <span id="framesDecoded">0</span><br>
+  Estimated latency: <span id="latency">-</span>ms
+</div>
+
+<div id="log"></div>
+
+<script>
+let pc = null;
+let ws = null;
+let statsInterval = null;
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div>[${new Date().toISOString().slice(11,23)}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+  console.log(msg);
+}
+
+async function connect() {
+  const serverUrl = document.getElementById('serverUrl').value;
+  const roomId = document.getElementById('roomId').value;
+
+  log(`Connecting to ${serverUrl}?room=${roomId}&role=viewer`);
+
+  ws = new WebSocket(`${serverUrl}?room=${roomId}&role=viewer`);
+
+  ws.onopen = () => {
+    log('WebSocket connected to signaling server');
+    setupPeerConnection();
+  };
+
+  ws.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+    log(`Received: ${msg.type}`);
+
+    if (msg.type === 'offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: msg.sdp }));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }));
+      log('Sent answer');
+    } else if (msg.type === 'ice_candidate') {
+      await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+    }
+  };
+
+  ws.onclose = () => log('WebSocket disconnected');
+  ws.onerror = (e) => log(`WebSocket error: ${e.message}`);
+}
+
+function setupPeerConnection() {
+  const config = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  };
+
+  pc = new RTCPeerConnection(config);
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      ws.send(JSON.stringify({ type: 'ice_candidate', candidate: event.candidate }));
+    }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    const state = pc.iceConnectionState;
+    document.getElementById('iceState').textContent = state;
+    log(`ICE state: ${state}`);
+  };
+
+  pc.ontrack = (event) => {
+    log(`Track received: ${event.track.kind}`);
+    if (event.track.kind === 'video') {
+      document.getElementById('video').srcObject = event.streams[0];
+    }
+  };
+
+  // TODO: Open data channel for input events
+  // pc.createDataChannel('input');
+
+  startStatsCollection();
+}
+
+function startStatsCollection() {
+  statsInterval = setInterval(async () => {
+    if (!pc) return;
+    const stats = await pc.getStats();
+    stats.forEach(report => {
+      if (report.type === 'inbound-rtp' && report.kind === 'video') {
+        document.getElementById('framesDecoded').textContent = report.framesDecoded || 0;
+        // TODO: Compute actual latency from encoded timestamp watermark
+      }
+    });
+  }, 1000);
+}
+
+function disconnect() {
+  if (pc) { pc.close(); pc = null; }
+  if (ws) { ws.close(); ws = null; }
+  if (statsInterval) { clearInterval(statsInterval); statsInterval = null; }
+  document.getElementById('video').srcObject = null;
+  document.getElementById('iceState').textContent = 'disconnected';
+  log('Disconnected');
+}
+</script>
+</body>
+</html>
