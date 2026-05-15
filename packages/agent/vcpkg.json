@@ -1,0 +1,13 @@
+{
+  "name": "indranet-agent",
+  "version": "0.1.0",
+  "description": "IndraNet host agent — screen capture, encode, WebRTC stream, input injection",
+  "dependencies": [
+    "nlohmann-json",
+    "websocketpp",
+    "openssl",
+    "boost-system",
+    "boost-asio"
+  ],
+  "builtin-baseline": "c8696863d371ab7f46e213d8f5ca923c4aef2a0"
+}
