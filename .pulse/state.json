@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "indranet",
+  "name": "IndraNet",
+  "description": "The compute network that never sleeps. Indra's Net for idle GPUs.",
+  "status": "active",
+  "statusReason": null,
+  "currentFeature": "complete scaffold — agent C++, client Tauri v2, shared types, scripts",
+  "currentPhase": "deploy",
+  "milestones": [],
+  "links": [],
+  "prs": [],
+  "_conflicts": [],
+  "repo": {
+    "hasGit": true,
+    "defaultBranch": "main",
+    "currentBranch": "main",
+    "remoteUrl": "github.com/ToniBirat7/indranet",
+    "githubSlug": "ToniBirat7/indranet",
+    "lastCommit": {
+      "sha": "70530e0",
+      "subject": "feat: complete scaffold — agent C++, client Tauri v2, shared types, scripts",
+      "authoredAt": "2026-05-15T05:06:24+00:00",
+      "ageDays": 26.2
+    },
+    "dirty": false,
+    "ahead": 0,
+    "behind": 0,
+    "ci": "failure"
+  },
+  "branches": [
+    {
+      "name": "main",
+      "lastCommitAt": "2026-05-15T05:06:24+00:00",
+      "ageDays": 26.2,
+      "isCurrent": true,
+      "merged": false,
+      "linkedPrNumber": null
+    }
+  ],
+  "techStack": {
+    "languages": [
+      "JavaScript"
+    ],
+    "runtimes": [
+      "node@20.0.0"
+    ],
+    "frameworks": [],
+    "packageManager": "npm",
+    "detectedFrom": [
+      "package.json"
+    ]
+  },
+  "wikiRef": {
+    "present": false,
+    "path": "wiki/",
+    "pages": null,
+    "lastIndexedAt": null
+  },
+  "architecture": {
+    "components": [
+      "docs",
+      "packages",
+      "poc",
+      "research",
+      "scripts"
+    ],
+    "summary": null,
+    "overviewDoc": "overview.md"
+  },
+  "human": {
+    "name": null,
+    "description": null,
+    "architectureSummary": null,
+    "techStackExtra": {
+      "languages": [],
+      "runtimes": [],
+      "frameworks": []
+    },
+    "notes": null,
+    "pinned": false
+  },
+  "metrics": {
+    "openTasks": 0,
+    "doingTasks": 0,
+    "doneTasks": 0,
+    "openPrs": 0,
+    "staleBranches": 0,
+    "commitsLast7d": 0,
+    "commitsLast30d": 2
+  },
+  "generatedAt": "2026-06-10T09:17:07.444398+00:00",
+  "generatedBy": "pulse-bulk@0.1.0"
+}

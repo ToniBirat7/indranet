@@ -1,0 +1,2 @@
+{"id": "commit:70530e0", "type": "commit", "at": "2026-05-15T05:06:24+00:00", "summary": "feat: complete scaffold — agent C++, client Tauri v2, shared types, scripts"}
+{"id": "ci:default:70530e0:failure", "type": "ci", "at": "2026-06-10T09:17:07.444239+00:00", "summary": "CI failure on main"}

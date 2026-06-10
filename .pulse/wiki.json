@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "present": false,
+  "path": "wiki/",
+  "schemaFile": "wiki/SCHEMA.md",
+  "pages": null,
+  "indexFile": "wiki/index.md",
+  "lastIndexedAt": null,
+  "topPages": []
+}
