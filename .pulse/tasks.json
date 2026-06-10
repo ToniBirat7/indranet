@@ -1,4 +1,45 @@
 {
   "schemaVersion": 1,
-  "tasks": []
+  "tasks": [
+    {
+      "id": "m:scaffold-c-agent-tauri-v2-client-shared-types",
+      "title": "Scaffold — C++ agent, Tauri v2 client, shared types",
+      "status": "done",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-10T11:00:58.412038+00:00",
+      "updatedAt": "2026-06-10T11:01:10.676209+00:00",
+      "note": null
+    },
+    {
+      "id": "m:agent-to-client-protocol",
+      "title": "Agent to client protocol",
+      "status": "doing",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-10T11:00:58.412066+00:00",
+      "updatedAt": "2026-06-10T11:01:10.676233+00:00",
+      "note": null
+    },
+    {
+      "id": "m:gpu-job-scheduling-provider-matching",
+      "title": "GPU job scheduling + provider matching",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-10T11:00:58.412078+00:00",
+      "updatedAt": "2026-06-10T11:01:10.676243+00:00",
+      "note": null
+    },
+    {
+      "id": "m:compute-marketplace-mvp",
+      "title": "Compute marketplace MVP",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-10T11:00:58.412087+00:00",
+      "updatedAt": "2026-06-10T11:01:10.676249+00:00",
+      "note": null
+    }
+  ]
 }

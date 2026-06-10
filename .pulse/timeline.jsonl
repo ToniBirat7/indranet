@@ -1,2 +1,6 @@
 {"id": "commit:70530e0", "type": "commit", "at": "2026-05-15T05:06:24+00:00", "summary": "feat: complete scaffold — agent C++, client Tauri v2, shared types, scripts"}
 {"id": "ci:default:70530e0:failure", "type": "ci", "at": "2026-06-10T09:17:07.444239+00:00", "summary": "CI failure on main"}
+{"id": "commit:7374540", "type": "commit", "at": "2026-06-10T09:31:40+00:00", "summary": "chore(pulse): track .pulse/ project state"}
+{"id": "commit:63e9677", "type": "commit", "at": "2026-05-14T09:47:30+00:00", "summary": "init"}
+{"id": "milestone:m:end-to-end-scaffold-complete:done", "type": "milestone", "at": "2026-06-10T11:00:58.412984+00:00", "summary": "Milestone: End-to-end scaffold complete"}
+{"id": "ci:default:7374540:failure", "type": "ci", "at": "2026-06-10T17:08:03.219333+00:00", "summary": "CI failure on main"}

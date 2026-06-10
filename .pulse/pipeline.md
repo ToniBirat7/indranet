@@ -8,5 +8,5 @@
 _How you run, build, test, and ship this project._
 
 <!-- pulse:auto:start -->
-_machine-generated pipeline summary appears here_
+Provider runs C++ agent -> registers idle GPU -> broker matches jobs -> client (Tauri v2) submits/monitors -> results returned over shared protocol.
 <!-- pulse:auto:end -->
