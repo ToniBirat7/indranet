@@ -279,3 +279,154 @@ func TestConcurrentSessionGuardBlocksDoubleBooking(t *testing.T) {
 		t.Errorf("double booking: expected 409, got %d: %s", w2.Code, w2.Body.String())
 	}
 }
+
+// TestTopupWalletDevMode verifies POST /v1/users/me/topup credits the wallet directly in dev mode.
+func TestTopupWalletDevMode(t *testing.T) {
+	d := newTestDeps(t)
+
+	if d.cfg.StripeSecretKey != "" {
+		t.Skip("skipping dev-mode test: STRIPE_SECRET_KEY is set")
+	}
+
+	email := "test_topup@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "password123", "name": "Topup Test",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var regResp map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&regResp)
+	token := regResp["token"].(string)
+	userID := regResp["user_id"].(string)
+
+	topupBody, _ := json.Marshal(map[string]interface{}{"amount_cents": 1000})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/users/me/topup", bytes.NewReader(topupBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("topup: expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var topupResp map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&topupResp)
+	if topupResp["dev_mode"] != true {
+		t.Error("expected dev_mode=true in topup response")
+	}
+
+	var balance int64
+	d.pool.QueryRow(context.Background(),
+		`SELECT balance_cents FROM users WHERE id = $1`, userID).Scan(&balance)
+	if balance != 1000 {
+		t.Errorf("expected balance=1000, got %d", balance)
+	}
+}
+
+// TestGetPendingSessionsReturnsAuthorized verifies the agent can discover AUTHORIZED sessions.
+func TestGetPendingSessionsReturnsAuthorized(t *testing.T) {
+	d := newTestDeps(t)
+
+	if d.cfg.StripeSecretKey != "" {
+		t.Skip("skipping dev-mode test: STRIPE_SECRET_KEY is set")
+	}
+
+	email := "test_pending@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "password123", "name": "Pending Test",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var regResp map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&regResp)
+	userToken := regResp["token"].(string)
+	userID := regResp["user_id"].(string)
+
+	// Register a host to get an agent token
+	hostBody, _ := json.Marshal(map[string]interface{}{
+		"display_name": "Test Host", "gpu_model": "RTX 4090", "vram_gb": 24,
+		"cpu_model": "i9", "ram_gb": 64, "os": "Windows 11",
+		"price_per_hour_cents": 600, "tags": []string{},
+	})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+userToken)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("register host: %d %s", w2.Code, w2.Body.String())
+	}
+	var hostResp map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&hostResp)
+	agentToken := hostResp["agent_token"].(string)
+	hostID := hostResp["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	// Mark host online
+	onlineBody, _ := json.Marshal(map[string]bool{"online": true})
+	req3 := httptest.NewRequest(http.MethodPut, "/v1/hosts/me/online", bytes.NewReader(onlineBody))
+	req3.Header.Set("Content-Type", "application/json")
+	req3.Header.Set("Authorization", "Bearer "+agentToken)
+	w3 := httptest.NewRecorder()
+	d.router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("set online: %d %s", w3.Code, w3.Body.String())
+	}
+
+	// User creates a session (dev mode → auto-AUTHORIZED)
+	sessBody, _ := json.Marshal(map[string]interface{}{"host_id": hostID, "duration_minutes": 15})
+	req4 := httptest.NewRequest(http.MethodPost, "/v1/sessions", bytes.NewReader(sessBody))
+	req4.Header.Set("Content-Type", "application/json")
+	req4.Header.Set("Authorization", "Bearer "+userToken)
+	// Need a different user since a user can't book their own host in some setups
+	// but our current code doesn't block this — proceed
+	_ = userID
+	w4 := httptest.NewRecorder()
+	d.router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusCreated {
+		t.Fatalf("create session: %d %s", w4.Code, w4.Body.String())
+	}
+	var sessResp map[string]interface{}
+	json.NewDecoder(w4.Body).Decode(&sessResp)
+	sessionID := sessResp["session_id"].(string)
+
+	// Agent fetches pending sessions
+	req5 := httptest.NewRequest(http.MethodGet, "/v1/sessions/pending", nil)
+	req5.Header.Set("Authorization", "Bearer "+agentToken)
+	w5 := httptest.NewRecorder()
+	d.router.ServeHTTP(w5, req5)
+	if w5.Code != http.StatusOK {
+		t.Fatalf("pending sessions: expected 200, got %d: %s", w5.Code, w5.Body.String())
+	}
+	var pendingResp map[string]interface{}
+	json.NewDecoder(w5.Body).Decode(&pendingResp)
+	pending := pendingResp["sessions"].([]interface{})
+	if len(pending) == 0 {
+		t.Fatal("expected at least one pending session")
+	}
+	found := false
+	for _, p := range pending {
+		pm := p.(map[string]interface{})
+		if pm["session_id"] == sessionID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("session %q not found in pending list", sessionID)
+	}
+}
