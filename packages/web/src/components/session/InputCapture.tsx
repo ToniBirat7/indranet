@@ -14,33 +14,37 @@ export default function InputCapture({ dataChannel }: Props) {
   useEffect(() => {
     if (!dataChannel) return
 
+    const send = (msg: object) => {
+      if (dataChannel.readyState === 'open') dataChannel.send(JSON.stringify(msg))
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault()
-      dataChannel.send(JSON.stringify({ t: 'k', e: 'd', c: e.code, k: e.keyCode }))
+      send({ t: 'k', e: 'd', c: e.code, k: e.keyCode })
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
       e.preventDefault()
-      dataChannel.send(JSON.stringify({ t: 'k', e: 'u', c: e.code, k: e.keyCode }))
+      send({ t: 'k', e: 'u', c: e.code, k: e.keyCode })
     }
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!locked.current) return
       // movementX/Y are relative deltas — only valid when pointer is locked
-      dataChannel.send(JSON.stringify({ t: 'm', dx: e.movementX, dy: e.movementY }))
+      send({ t: 'm', dx: e.movementX, dy: e.movementY })
     }
 
     const handleMouseDown = (e: MouseEvent) => {
-      dataChannel.send(JSON.stringify({ t: 'mb', e: 'd', b: e.button }))
+      send({ t: 'mb', e: 'd', b: e.button })
     }
 
     const handleMouseUp = (e: MouseEvent) => {
-      dataChannel.send(JSON.stringify({ t: 'mb', e: 'u', b: e.button }))
+      send({ t: 'mb', e: 'u', b: e.button })
     }
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
-      dataChannel.send(JSON.stringify({ t: 'mw', d: e.deltaY }))
+      send({ t: 'mw', d: e.deltaY })
     }
 
     let gamepollId: number | null = null
@@ -49,7 +53,7 @@ export default function InputCapture({ dataChannel }: Props) {
       for (const pad of pads) {
         if (!pad) continue
         const bt = pad.buttons.reduce((acc, b, i) => acc | (b.pressed ? 1 << i : 0), 0)
-        dataChannel.send(JSON.stringify({
+        send({
           t: 'gp',
           lx: pad.axes[0] ?? 0,
           ly: pad.axes[1] ?? 0,
@@ -58,7 +62,7 @@ export default function InputCapture({ dataChannel }: Props) {
           bt,
           lt: pad.buttons[6]?.value ?? 0,
           rt: pad.buttons[7]?.value ?? 0,
-        }))
+        })
         break // send only first connected gamepad
       }
       gamepollId = requestAnimationFrame(pollGamepads)
