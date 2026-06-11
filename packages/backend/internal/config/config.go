@@ -52,6 +52,9 @@ func Load() *Config {
 		slog.Error("STRIPE_SECRET_KEY is required in non-development environments")
 		os.Exit(1)
 	}
+	if cfg.StripeSecretKey != "" && cfg.StripeWebhookSecret == "" {
+		slog.Warn("STRIPE_WEBHOOK_SECRET is not set — all incoming webhooks will be rejected")
+	}
 
 	if cfg.StripePlatformFeePercent < 0 || cfg.StripePlatformFeePercent > 100 {
 		slog.Error("STRIPE_PLATFORM_FEE_PERCENT must be between 0 and 100",
