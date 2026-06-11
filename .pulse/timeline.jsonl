@@ -36,3 +36,25 @@
 {"id": "commit:9e91416", "type": "commit", "at": "2026-06-11T07:10:01+00:00", "summary": "feat: functional marketplace filters — VRAM, price, online-only"}
 {"id": "commit:b2f7814", "type": "commit", "at": "2026-06-11T07:11:58+00:00", "summary": "test: add Sweep() public method, sweep abandoned-session and double-booking tests"}
 {"id": "ci:default:b2f7814:pending", "type": "ci", "at": "2026-06-11T07:12:38.223016+00:00", "summary": "CI pending on main"}
+{"id": "commit:f627322", "type": "commit", "at": "2026-06-11T07:13:17+00:00", "summary": "chore(pulse): update .pulse/ project state"}
+{"id": "commit:cbc8037", "type": "commit", "at": "2026-06-11T07:13:09+00:00", "summary": "docs: update .env.example — FRONTEND_BASE_URL, NEXT_PUBLIC_TURN_* vars"}
+{"id": "commit:766d9a9", "type": "commit", "at": "2026-06-11T07:17:04+00:00", "summary": "ci: add TypeScript type-check job for shared + web packages"}
+{"id": "commit:4f990d2", "type": "commit", "at": "2026-06-11T07:16:43+00:00", "summary": "fix: shared package — add tsconfig files, align InputEventSchema with compact wire format"}
+{"id": "commit:42491c4", "type": "commit", "at": "2026-06-11T07:17:32+00:00", "summary": "chore: update dev.sh to include web-dev service URLs and log commands"}
+{"id": "commit:bef13b0", "type": "commit", "at": "2026-06-11T07:20:32+00:00", "summary": "fix(billing): add AUTHORIZED→FAILED sweep + host double-booking guard"}
+{"id": "commit:cca08e6", "type": "commit", "at": "2026-06-11T07:27:07+00:00", "summary": "feat(web): payment-confirmed banner on session loading screen"}
+{"id": "commit:0cf8a82", "type": "commit", "at": "2026-06-11T07:26:15+00:00", "summary": "feat(api): per-user rate limits on session creation and wallet topup"}
+{"id": "commit:da7f74c", "type": "commit", "at": "2026-06-11T07:28:20+00:00", "summary": "fix(api): heartbeat keeps host online + correct Stripe redirect URL"}
+{"id": "commit:1914674", "type": "commit", "at": "2026-06-11T07:29:38+00:00", "summary": "test(billing): add sweep test for stale AUTHORIZED→FAILED transition"}
+{"id": "commit:7362cfb", "type": "commit", "at": "2026-06-11T07:31:17+00:00", "summary": "feat(api+web): include host display name in session list"}
+{"id": "commit:04c3dd4", "type": "commit", "at": "2026-06-11T07:33:19+00:00", "summary": "fix(api): add input validation to RegisterHost"}
+{"id": "commit:3506e8a", "type": "commit", "at": "2026-06-11T07:32:31+00:00", "summary": "fix(signaling): relay WebRTC messages to opposite participant only"}
+{"id": "commit:67db8fb", "type": "commit", "at": "2026-06-11T07:39:19+00:00", "summary": "refactor(api): simplify ListHosts filter — TRUE not (online=true OR online=false)"}
+{"id": "commit:946c3cc", "type": "commit", "at": "2026-06-11T07:38:59+00:00", "summary": "feat(web): add mouse wheel and gamepad input to InputCapture"}
+{"id": "commit:e71ec7d", "type": "commit", "at": "2026-06-11T07:38:17+00:00", "summary": "feat(web): add pagination to marketplace host grid"}
+{"id": "commit:98c9dda", "type": "commit", "at": "2026-06-11T07:37:41+00:00", "summary": "feat(web): show reason-specific messages on session end"}
+{"id": "commit:d6e54da", "type": "commit", "at": "2026-06-11T07:37:00+00:00", "summary": "test(api): add tests for wallet topup and agent pending session discovery"}
+{"id": "commit:57c3a07", "type": "commit", "at": "2026-06-11T07:35:53+00:00", "summary": "fix(api): correct total count in ListHosts pagination"}
+{"id": "commit:99a87e9", "type": "commit", "at": "2026-06-11T07:34:31+00:00", "summary": "feat(api): add GET /v1/sessions/pending for host agent session discovery"}
+{"id": "commit:b9fe64e", "type": "commit", "at": "2026-06-11T07:50:09+00:00", "summary": "fix(api): rate limiter goroutine leak + ListSessions pagination"}
+{"id": "commit:7d9151e", "type": "commit", "at": "2026-06-11T07:55:13+00:00", "summary": "fix(api,web): input validation + StreamViewer bugs + FilterBar clear"}

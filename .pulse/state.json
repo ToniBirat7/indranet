@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "b2f7814",
-      "subject": "test: add Sweep() public method, sweep abandoned-session and double-booking tests",
-      "authoredAt": "2026-06-11T07:11:58+00:00",
+      "sha": "7d9151e",
+      "subject": "fix(api,web): input validation + StreamViewer bugs + FilterBar clear",
+      "authoredAt": "2026-06-11T07:55:13+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T07:11:58+00:00",
+      "lastCommitAt": "2026-06-11T07:55:13+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 25,
-    "commitsLast30d": 27,
+    "commitsLast7d": 47,
+    "commitsLast30d": 49,
     "progress": 26,
     "activityDaily": [
       0,
@@ -223,30 +223,250 @@
       0,
       0,
       2,
-      23
+      45
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 27,
+    "activityTotal90d": 49,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 27
+        "commits": 49
       }
     ]
   },
-  "generatedAt": "2026-06-11T07:12:38.223170+00:00",
-  "generatedBy": "pulse-skill@0.1.0",
+  "generatedAt": "2026-06-11T07:57:12.498890+00:00",
+  "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "b2f7814",
+      "sha": "7d9151e",
       "parents": [
-        "9e91416"
+        "b9fe64e"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "fix(api,web): input validation + StreamViewer bugs + FilterBar clear",
+      "at": "2026-06-11T07:55:13+00:00"
+    },
+    {
+      "sha": "b9fe64e",
+      "parents": [
+        "67db8fb"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): rate limiter goroutine leak + ListSessions pagination",
+      "at": "2026-06-11T07:50:09+00:00"
+    },
+    {
+      "sha": "67db8fb",
+      "parents": [
+        "946c3cc"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "refactor(api): simplify ListHosts filter — TRUE not (online=true OR online=false)",
+      "at": "2026-06-11T07:39:19+00:00"
+    },
+    {
+      "sha": "946c3cc",
+      "parents": [
+        "e71ec7d"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(web): add mouse wheel and gamepad input to InputCapture",
+      "at": "2026-06-11T07:38:59+00:00"
+    },
+    {
+      "sha": "e71ec7d",
+      "parents": [
+        "98c9dda"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(web): add pagination to marketplace host grid",
+      "at": "2026-06-11T07:38:17+00:00"
+    },
+    {
+      "sha": "98c9dda",
+      "parents": [
+        "d6e54da"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(web): show reason-specific messages on session end",
+      "at": "2026-06-11T07:37:41+00:00"
+    },
+    {
+      "sha": "d6e54da",
+      "parents": [
+        "57c3a07"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "test(api): add tests for wallet topup and agent pending session discovery",
+      "at": "2026-06-11T07:37:00+00:00"
+    },
+    {
+      "sha": "57c3a07",
+      "parents": [
+        "99a87e9"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): correct total count in ListHosts pagination",
+      "at": "2026-06-11T07:35:53+00:00"
+    },
+    {
+      "sha": "99a87e9",
+      "parents": [
+        "04c3dd4"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(api): add GET /v1/sessions/pending for host agent session discovery",
+      "at": "2026-06-11T07:34:31+00:00"
+    },
+    {
+      "sha": "04c3dd4",
+      "parents": [
+        "3506e8a"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): add input validation to RegisterHost",
+      "at": "2026-06-11T07:33:19+00:00"
+    },
+    {
+      "sha": "3506e8a",
+      "parents": [
+        "7362cfb"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(signaling): relay WebRTC messages to opposite participant only",
+      "at": "2026-06-11T07:32:31+00:00"
+    },
+    {
+      "sha": "7362cfb",
+      "parents": [
+        "1914674"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(api+web): include host display name in session list",
+      "at": "2026-06-11T07:31:17+00:00"
+    },
+    {
+      "sha": "1914674",
+      "parents": [
+        "da7f74c"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "test(billing): add sweep test for stale AUTHORIZED→FAILED transition",
+      "at": "2026-06-11T07:29:38+00:00"
+    },
+    {
+      "sha": "da7f74c",
+      "parents": [
+        "cca08e6"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): heartbeat keeps host online + correct Stripe redirect URL",
+      "at": "2026-06-11T07:28:20+00:00"
+    },
+    {
+      "sha": "cca08e6",
+      "parents": [
+        "0cf8a82"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(web): payment-confirmed banner on session loading screen",
+      "at": "2026-06-11T07:27:07+00:00"
+    },
+    {
+      "sha": "0cf8a82",
+      "parents": [
+        "bef13b0"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(api): per-user rate limits on session creation and wallet topup",
+      "at": "2026-06-11T07:26:15+00:00"
+    },
+    {
+      "sha": "bef13b0",
+      "parents": [
+        "42491c4"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(billing): add AUTHORIZED→FAILED sweep + host double-booking guard",
+      "at": "2026-06-11T07:20:32+00:00"
+    },
+    {
+      "sha": "42491c4",
+      "parents": [
+        "766d9a9"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "chore: update dev.sh to include web-dev service URLs and log commands",
+      "at": "2026-06-11T07:17:32+00:00"
+    },
+    {
+      "sha": "766d9a9",
+      "parents": [
+        "4f990d2"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "ci: add TypeScript type-check job for shared + web packages",
+      "at": "2026-06-11T07:17:04+00:00"
+    },
+    {
+      "sha": "4f990d2",
+      "parents": [
+        "f627322"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix: shared package — add tsconfig files, align InputEventSchema with compact wire format",
+      "at": "2026-06-11T07:16:43+00:00"
+    },
+    {
+      "sha": "f627322",
+      "parents": [
+        "cbc8037"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "chore(pulse): update .pulse/ project state",
+      "at": "2026-06-11T07:13:17+00:00"
+    },
+    {
+      "sha": "cbc8037",
+      "parents": [
+        "b2f7814"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "docs: update .env.example — FRONTEND_BASE_URL, NEXT_PUBLIC_TURN_* vars",
+      "at": "2026-06-11T07:13:09+00:00"
+    },
+    {
+      "sha": "b2f7814",
+      "parents": [
+        "9e91416"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "test: add Sweep() public method, sweep abandoned-session and double-booking tests",
       "at": "2026-06-11T07:11:58+00:00"
