@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 //
 // In production: Stripe sends webhooks to https://api.indranet.io/v1/webhooks/stripe
 export async function POST(req: NextRequest) {
-  // Forward to backend
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL
+  // Forward to backend; use API_URL (internal Docker network) when available
+  const backendUrl = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
   if (!backendUrl) {
     return NextResponse.json({ error: 'backend URL not configured' }, { status: 500 })
   }

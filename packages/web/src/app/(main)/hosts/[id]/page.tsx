@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default async function HostDetailPage({ params }: Props) {
-  const apiURL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
+  const apiURL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
 
   const res = await fetch(`${apiURL}/v1/hosts/${params.id}`, { cache: 'no-store' })
   if (!res.ok) notFound()
