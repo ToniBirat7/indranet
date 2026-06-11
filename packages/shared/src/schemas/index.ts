@@ -1,12 +1,15 @@
 import { z } from 'zod'
 
 export const SessionStateSchema = z.enum([
-  'created', 'authorized', 'active', 'ending', 'ended', 'failed',
+  'CREATED', 'AUTHORIZED', 'ACTIVE', 'ENDING', 'ENDED', 'FAILED',
 ])
 
+// IDs use a prefixed hex format: usr_<hex24>, hst_<hex24>, ses_<hex24>
+const prefixedId = z.string().regex(/^[a-z]{3}_[0-9a-f]{24}$/)
+
 export const CreateSessionSchema = z.object({
-  host_id: z.string().uuid(),
-  duration_minutes: z.number().int().min(5).max(480),
+  host_id: prefixedId,
+  duration_minutes: z.number().int().min(15).max(480),
 })
 
 export const RegisterSchema = z.object({

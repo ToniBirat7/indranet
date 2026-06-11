@@ -62,12 +62,12 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "5515d7b",
-      "subject": "feat: complete Tauri client scaffold with Vite entry points",
-      "authoredAt": "2026-06-11T06:49:08+00:00",
+      "sha": "1f0d6f4",
+      "subject": "security: in-memory rate limiting for auth endpoints",
+      "authoredAt": "2026-06-11T06:50:12+00:00",
       "ageDays": 0.0
     },
-    "dirty": false,
+    "dirty": true,
     "ahead": 0,
     "behind": 0,
     "ci": "pending"
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:49:08+00:00",
+      "lastCommitAt": "2026-06-11T06:50:12+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 16,
-    "commitsLast30d": 18,
+    "commitsLast7d": 17,
+    "commitsLast30d": 19,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,30 +223,40 @@
       0,
       0,
       2,
-      14
+      15
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 18,
+    "activityTotal90d": 19,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 18
+        "commits": 19
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:49:27.361942+00:00",
+  "generatedAt": "2026-06-11T06:51:27.471216+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "5515d7b",
+      "sha": "1f0d6f4",
       "parents": [
-        "d8facce"
+        "5515d7b"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "security: in-memory rate limiting for auth endpoints",
+      "at": "2026-06-11T06:50:12+00:00"
+    },
+    {
+      "sha": "5515d7b",
+      "parents": [
+        "d8facce"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "feat: complete Tauri client scaffold with Vite entry points",
       "at": "2026-06-11T06:49:08+00:00"
