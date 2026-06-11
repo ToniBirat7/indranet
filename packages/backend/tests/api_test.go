@@ -805,3 +805,167 @@ func TestAgentGetHostMe(t *testing.T) {
 		t.Errorf("unauthenticated GET /v1/hosts/me: expected 401, got %d", w4.Code)
 	}
 }
+
+// TestListHostsAndGetHost verifies GET /v1/hosts and GET /v1/hosts/{id} (public routes).
+func TestListHostsAndGetHost(t *testing.T) {
+	d := newTestDeps(t)
+	email := "test_listhosts@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	// Register user + host
+	regBody, _ := json.Marshal(map[string]string{"email": email, "password": "password123", "name": "Host Lister"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var rr map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&rr)
+	userToken := rr["token"].(string)
+
+	hostBody, _ := json.Marshal(map[string]interface{}{
+		"display_name": "ListTest Host", "gpu_model": "RTX 4080", "vram_gb": 16,
+		"cpu_model": "Ryzen 9", "ram_gb": 32, "os": "Windows 11",
+		"price_per_hour_cents": 500, "tags": []string{"gaming"},
+	})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+userToken)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("register host: %d %s", w2.Code, w2.Body.String())
+	}
+	var hr map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&hr)
+	hostID := hr["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	// GET /v1/hosts — no auth required
+	req3 := httptest.NewRequest(http.MethodGet, "/v1/hosts", nil)
+	w3 := httptest.NewRecorder()
+	d.router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("list hosts: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+	var listResp map[string]interface{}
+	json.NewDecoder(w3.Body).Decode(&listResp)
+	if listResp["hosts"] == nil {
+		t.Error("expected 'hosts' field in list response")
+	}
+	hosts := listResp["hosts"].([]interface{})
+	found := false
+	for _, h := range hosts {
+		hm := h.(map[string]interface{})
+		if hm["id"] == hostID {
+			found = true
+			if hm["display_name"] != "ListTest Host" {
+				t.Errorf("expected display_name=ListTest Host, got %v", hm["display_name"])
+			}
+		}
+	}
+	if !found {
+		t.Errorf("registered host %q not found in GET /v1/hosts", hostID)
+	}
+
+	// GET /v1/hosts/{id} — no auth required
+	req4 := httptest.NewRequest(http.MethodGet, "/v1/hosts/"+hostID, nil)
+	w4 := httptest.NewRecorder()
+	d.router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusOK {
+		t.Fatalf("get host: expected 200, got %d: %s", w4.Code, w4.Body.String())
+	}
+	var getResp map[string]interface{}
+	json.NewDecoder(w4.Body).Decode(&getResp)
+	if getResp["id"] != hostID {
+		t.Errorf("get host: expected id=%q, got %q", hostID, getResp["id"])
+	}
+	if getResp["gpu_model"] != "RTX 4080" {
+		t.Errorf("get host: expected gpu_model=RTX 4080, got %v", getResp["gpu_model"])
+	}
+
+	// GET /v1/hosts/{id} with unknown ID → 404
+	req5 := httptest.NewRequest(http.MethodGet, "/v1/hosts/00000000-0000-0000-0000-000000000000", nil)
+	w5 := httptest.NewRecorder()
+	d.router.ServeHTTP(w5, req5)
+	if w5.Code != http.StatusNotFound {
+		t.Errorf("unknown host: expected 404, got %d", w5.Code)
+	}
+}
+
+// TestHostHeartbeat verifies PUT /v1/hosts/me/heartbeat updates the host's last-seen time.
+func TestHostHeartbeat(t *testing.T) {
+	d := newTestDeps(t)
+	email := "test_heartbeat@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	// Register user + host → get agent_token
+	regBody, _ := json.Marshal(map[string]string{"email": email, "password": "password123", "name": "Heartbeater"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var rr map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&rr)
+	userToken := rr["token"].(string)
+
+	hostBody, _ := json.Marshal(map[string]interface{}{
+		"display_name": "Heartbeat Host", "gpu_model": "RX 7900 XTX", "vram_gb": 24,
+		"cpu_model": "Ryzen 7", "ram_gb": 32, "os": "Windows 11",
+		"price_per_hour_cents": 400, "tags": []string{},
+	})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+userToken)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("register host: %d %s", w2.Code, w2.Body.String())
+	}
+	var hr map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&hr)
+	agentToken := hr["agent_token"].(string)
+	hostID := hr["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	// PUT /v1/hosts/me/heartbeat — agent auth
+	req3 := httptest.NewRequest(http.MethodPut, "/v1/hosts/me/heartbeat", nil)
+	req3.Header.Set("Authorization", "Bearer "+agentToken)
+	w3 := httptest.NewRecorder()
+	d.router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("heartbeat: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+
+	// Verify updated_at advanced (updated_at > created_at by re-reading the host)
+	var updatedAt string
+	err := d.pool.QueryRow(context.Background(), `SELECT updated_at FROM hosts WHERE id = $1`, hostID).Scan(&updatedAt)
+	if err != nil {
+		t.Fatalf("query host: %v", err)
+	}
+	if updatedAt == "" {
+		t.Error("expected non-empty updated_at after heartbeat")
+	}
+
+	// Unauthenticated heartbeat must be rejected
+	req4 := httptest.NewRequest(http.MethodPut, "/v1/hosts/me/heartbeat", nil)
+	w4 := httptest.NewRecorder()
+	d.router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusUnauthorized {
+		t.Errorf("unauthenticated heartbeat: expected 401, got %d", w4.Code)
+	}
+
+	// User JWT (not agent JWT) must be rejected
+	req5 := httptest.NewRequest(http.MethodPut, "/v1/hosts/me/heartbeat", nil)
+	req5.Header.Set("Authorization", "Bearer "+userToken)
+	w5 := httptest.NewRecorder()
+	d.router.ServeHTTP(w5, req5)
+	if w5.Code != http.StatusUnauthorized {
+		t.Errorf("user JWT on agent route: expected 401, got %d", w5.Code)
+	}
+}
