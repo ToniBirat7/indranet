@@ -74,6 +74,7 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 		FROM hosts
 		WHERE ` + filters + `
 		ORDER BY
+		  online DESC,
 		  CASE WHEN rating_count > 0 THEN rating_sum::float / rating_count ELSE 0 END DESC,
 		  price_per_hour_cents ASC
 		LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
