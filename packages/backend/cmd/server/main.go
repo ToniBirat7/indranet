@@ -67,7 +67,11 @@ func main() {
 	go hub.Run()
 	slog.Info("signaling hub started")
 
-	billingEngine := billing.NewEngine(pool, rdb, hub)
+	billingEngine := billing.NewEngine(
+		pool, rdb, hub,
+		time.Duration(cfg.BillingTickSeconds)*time.Second,
+		cfg.SessionWarningMinutes,
+	)
 	go billingEngine.Run()
 	slog.Info("billing engine started")
 

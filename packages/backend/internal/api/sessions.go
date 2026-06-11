@@ -3,17 +3,21 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	stripe "github.com/stripe/stripe-go/v76"
+	stripecs "github.com/stripe/stripe-go/v76/checkout/session"
 
 	"github.com/ToniBirat7/indranet/packages/backend/internal/models"
 )
 
-// CreateSession creates a new session record.
-// Payment gating (Stripe) is wired in packages/backend/internal/api/payments.go.
-// For Phase 0: creates session in CREATED state without Stripe (direct auth flow).
+// CreateSession creates a new session and (in production) a Stripe Checkout session.
+// In development (no STRIPE_SECRET_KEY), the session is auto-authorized for easy testing.
 func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value(ctxKeyUserID).(string)
 	if userID == "" {
@@ -37,7 +41,6 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 		req.DurationMinutes = 15
 	}
 
-	// Fetch host to get rate and verify it's online
 	var pricePerHourCents int64
 	var online bool
 	err := h.deps.Pool.QueryRow(r.Context(),
@@ -71,14 +74,74 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := map[string]interface{}{
+		"session_id":            sessionID,
+		"state":                 "CREATED",
+		"rate_per_minute_cents": ratePerMinuteCents,
+		"pre_auth_minutes":      req.DurationMinutes,
+	}
+
+	if h.deps.Config.StripeSecretKey == "" {
+		// Dev mode: auto-authorize so the full flow is testable without Stripe
+		if _, err := h.deps.Pool.Exec(r.Context(), `
+			UPDATE sessions SET state = 'AUTHORIZED', updated_at = NOW() WHERE id = $1
+		`, sessionID); err != nil {
+			slog.Error("dev auto-authorize failed", "session_id", sessionID, "error", err)
+		} else {
+			resp["state"] = "AUTHORIZED"
+			h.deps.Hub.SendToSession(sessionID, map[string]string{
+				"type":       "session_authorized",
+				"session_id": sessionID,
+			})
+			go h.awaitAgentReady(sessionID, 5*time.Minute)
+		}
+	} else {
+		checkoutURL, err := h.createStripeCheckout(sessionID, req.DurationMinutes, ratePerMinuteCents)
+		if err != nil {
+			slog.Error("stripe: checkout creation failed", "session_id", sessionID, "error", err)
+			// Don't block session creation — return without checkout_url; user can retry payment
+		} else {
+			resp["checkout_url"] = checkoutURL
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"session_id":           sessionID,
-		"state":                "CREATED",
-		"rate_per_minute_cents": ratePerMinuteCents,
-		"pre_auth_minutes":     req.DurationMinutes,
-	})
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handlers) createStripeCheckout(sessionID string, durationMinutes int, ratePerMinuteCents int64) (string, error) {
+	stripe.Key = h.deps.Config.StripeSecretKey
+
+	totalCents := ratePerMinuteCents * int64(durationMinutes)
+	productName := fmt.Sprintf("IndraNet Session — %d minutes", durationMinutes)
+
+	params := &stripe.CheckoutSessionParams{
+		Mode: stripe.String(string(stripe.CheckoutSessionModePayment)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+					Currency: stripe.String("usd"),
+					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+						Name: stripe.String(productName),
+					},
+					UnitAmount: stripe.Int64(totalCents),
+				},
+				Quantity: stripe.Int64(1),
+			},
+		},
+		Metadata: map[string]string{
+			"indranet_session_id": sessionID,
+		},
+		SuccessURL: stripe.String(h.deps.Config.FrontendBaseURL + "/sessions/" + sessionID + "?payment=success"),
+		CancelURL:  stripe.String(h.deps.Config.FrontendBaseURL + "/sessions/" + sessionID + "?payment=cancelled"),
+	}
+
+	cs, err := stripecs.New(params)
+	if err != nil {
+		return "", fmt.Errorf("stripe checkout session: %w", err)
+	}
+	return cs.URL, nil
 }
 
 // StartSession transitions a session from AUTHORIZED to ACTIVE.
@@ -163,7 +226,6 @@ func (h *Handlers) GetSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Compute remaining balance in minutes from user wallet
 	var userBalanceCents int64
 	_ = h.deps.Pool.QueryRow(r.Context(),
 		`SELECT balance_cents FROM users WHERE id = $1`, userID,

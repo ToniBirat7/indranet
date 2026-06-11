@@ -1,10 +1,13 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
@@ -16,7 +19,6 @@ import (
 
 // StripeWebhook handles incoming Stripe webhook events.
 // CRITICAL: Stripe-Signature header must be verified before processing any event.
-// See research/06-payment/stripe-connect.md for the list of handled events.
 func (h *Handlers) StripeWebhook(w http.ResponseWriter, r *http.Request) {
 	const maxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
@@ -43,7 +45,7 @@ func (h *Handlers) StripeWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch event.Type {
 	case "checkout.session.completed":
-		if err := h.handleCheckoutComplete(event); err != nil {
+		if err := h.handleCheckoutComplete(r.Context(), event); err != nil {
 			slog.Error("stripe: checkout.session.completed handler failed", "error", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
@@ -63,10 +65,10 @@ func (h *Handlers) StripeWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleCheckoutComplete processes a successful checkout and transitions the session to AUTHORIZED.
-func (h *Handlers) handleCheckoutComplete(event stripe.Event) error {
+func (h *Handlers) handleCheckoutComplete(ctx context.Context, event stripe.Event) error {
 	var checkoutSession stripe.CheckoutSession
 	if err := json.Unmarshal(event.Data.Raw, &checkoutSession); err != nil {
-		return err
+		return fmt.Errorf("unmarshal checkout session: %w", err)
 	}
 
 	internalSessionID := checkoutSession.Metadata["indranet_session_id"]
@@ -75,22 +77,69 @@ func (h *Handlers) handleCheckoutComplete(event stripe.Event) error {
 		return nil
 	}
 
-	slog.Info("stripe: payment complete, authorizing session",
+	tag, err := h.deps.Pool.Exec(ctx, `
+		UPDATE sessions
+		SET state = 'AUTHORIZED', stripe_checkout_id = $1, updated_at = NOW()
+		WHERE id = $2 AND state = 'CREATED'
+	`, checkoutSession.ID, internalSessionID)
+	if err != nil {
+		return fmt.Errorf("authorize session: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		slog.Warn("stripe: session not in CREATED state, ignoring duplicate webhook",
+			"session_id", internalSessionID,
+			"stripe_session_id", checkoutSession.ID,
+		)
+		return nil
+	}
+
+	slog.Info("stripe: session authorized",
 		"stripe_session_id", checkoutSession.ID,
 		"indranet_session_id", internalSessionID,
 	)
 
-	// TODO: UPDATE sessions SET state='AUTHORIZED', stripe_checkout_id=$1 WHERE id=$2 AND state='CREATED'
-	// TODO: Notify host agent via signaling hub: session_authorized
-	// TODO: Start a timeout goroutine: if agent doesn't confirm ready within 5min, mark FAILED
+	// Notify the host agent that it should prepare the sandbox
+	h.deps.Hub.SendToSession(internalSessionID, map[string]string{
+		"type":       "session_authorized",
+		"session_id": internalSessionID,
+	})
+
+	// If agent doesn't confirm ACTIVE within 5 minutes, mark FAILED
+	go h.awaitAgentReady(internalSessionID, 5*time.Minute)
 
 	return nil
+}
+
+// awaitAgentReady marks a session FAILED if the host agent never transitions it to ACTIVE.
+func (h *Handlers) awaitAgentReady(sessionID string, timeout time.Duration) {
+	time.Sleep(timeout)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tag, err := h.deps.Pool.Exec(ctx, `
+		UPDATE sessions SET state = 'FAILED', updated_at = NOW()
+		WHERE id = $1 AND state = 'AUTHORIZED'
+	`, sessionID)
+	if err != nil {
+		slog.Error("billing: awaitAgentReady: DB update failed",
+			"session_id", sessionID, "error", err)
+		return
+	}
+	if tag.RowsAffected() > 0 {
+		slog.Warn("billing: agent never confirmed ready, session marked FAILED",
+			"session_id", sessionID, "timeout", timeout)
+		h.deps.Hub.SendToSession(sessionID, map[string]string{
+			"type":   "session_failed",
+			"reason": "agent_timeout",
+		})
+	}
 }
 
 var wsUpgrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,
-	CheckOrigin:    func(r *http.Request) bool { return true },
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // Signal handles WebSocket connections for WebRTC signaling.

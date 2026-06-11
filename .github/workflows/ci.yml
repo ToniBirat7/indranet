@@ -41,6 +41,46 @@ jobs:
             golang:1.22-alpine \
             sh -c "go build ./... && go vet ./..."
 
+  test-backend:
+    name: Integration Tests (Go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: indranet_test
+          POSTGRES_USER: indranet
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Go integration tests
+        run: |
+          docker run --rm --network host \
+            -v ${{ github.workspace }}/packages/backend:/app \
+            -w /app \
+            -e DATABASE_URL=postgres://indranet:testpassword@localhost:5432/indranet_test?sslmode=disable \
+            -e REDIS_URL=redis://localhost:6379 \
+            -e JWT_SECRET=test-secret-ci \
+            golang:1.22-alpine \
+            go test -v -race -timeout 120s ./...
+
   build-poc-02:
     name: Build PoC 02 (WebRTC Signal)
     runs-on: ubuntu-latest

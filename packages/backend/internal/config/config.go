@@ -14,11 +14,12 @@ type Config struct {
 	NATSURL        string
 	JWTSecret      string
 	JWTExpiryHours int
-	StripeSecretKey        string
-	StripeWebhookSecret    string
+	StripeSecretKey          string
+	StripeWebhookSecret      string
 	StripePlatformFeePercent int
-	BillingTickSeconds     int
-	SessionWarningMinutes  int
+	BillingTickSeconds       int
+	SessionWarningMinutes    int
+	FrontendBaseURL          string
 }
 
 func Load() *Config {
@@ -33,8 +34,9 @@ func Load() *Config {
 		StripeSecretKey:        getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret:    getEnv("STRIPE_WEBHOOK_SECRET", ""),
 		StripePlatformFeePercent: getEnvInt("STRIPE_PLATFORM_FEE_PERCENT", 20),
-		BillingTickSeconds:     getEnvInt("SESSION_BILLING_TICK_SECONDS", 60),
-		SessionWarningMinutes:  getEnvInt("SESSION_WARNING_MINUTES_REMAINING", 5),
+		BillingTickSeconds:       getEnvInt("SESSION_BILLING_TICK_SECONDS", 60),
+		SessionWarningMinutes:    getEnvInt("SESSION_WARNING_MINUTES_REMAINING", 5),
+		FrontendBaseURL:          getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
 	}
 
 	if cfg.JWTSecret == "" {

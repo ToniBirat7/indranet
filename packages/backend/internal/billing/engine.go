@@ -15,12 +15,13 @@ import (
 
 // Engine is the billing tick loop. It runs in a dedicated goroutine.
 type Engine struct {
-	pool      *pgxpool.Pool
-	rdb       *redis.Client
-	hub       HubNotifier // interface to send WebSocket events to session clients
-	tickEvery time.Duration
-	stopCh    chan struct{}
-	wg        sync.WaitGroup
+	pool           *pgxpool.Pool
+	rdb            *redis.Client
+	hub            HubNotifier
+	tickEvery      time.Duration
+	warningMinutes int
+	stopCh         chan struct{}
+	wg             sync.WaitGroup
 }
 
 // HubNotifier is the minimal interface the billing engine needs from the signaling hub.
@@ -29,14 +30,14 @@ type HubNotifier interface {
 }
 
 // NewEngine creates a new billing engine.
-// tickEvery is the interval between billing ticks (typically 60s in production, shorter in tests).
-func NewEngine(pool *pgxpool.Pool, rdb *redis.Client, hub HubNotifier) *Engine {
+func NewEngine(pool *pgxpool.Pool, rdb *redis.Client, hub HubNotifier, tickEvery time.Duration, warningMinutes int) *Engine {
 	return &Engine{
-		pool:      pool,
-		rdb:       rdb,
-		hub:       hub,
-		tickEvery: 60 * time.Second,
-		stopCh:    make(chan struct{}),
+		pool:           pool,
+		rdb:            rdb,
+		hub:            hub,
+		tickEvery:      tickEvery,
+		warningMinutes: warningMinutes,
+		stopCh:         make(chan struct{}),
 	}
 }
 
@@ -67,84 +68,137 @@ func (e *Engine) Stop() {
 	e.wg.Wait()
 }
 
-// tick processes one billing cycle: find all ACTIVE sessions and deduct their rate.
+// Tick runs one billing cycle immediately. Used in integration tests.
+func (e *Engine) Tick() {
+	e.tick()
+}
+
+type activeSession struct {
+	SessionID          string
+	UserID             string
+	RatePerMinuteCents int64
+	BalanceCents       int64
+}
+
 func (e *Engine) tick() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// TODO: Query all ACTIVE sessions with their rate and user balance
-	// SELECT s.id, s.user_id, s.rate_per_minute_cents, u.balance_cents
-	// FROM sessions s
-	// JOIN users u ON u.id = s.user_id
-	// WHERE s.state = 'ACTIVE'
+	rows, err := e.pool.Query(ctx, `
+		SELECT s.id, s.user_id, s.rate_per_minute_cents, u.balance_cents
+		FROM sessions s
+		JOIN users u ON u.id = s.user_id
+		WHERE s.state = 'ACTIVE'
+	`)
+	if err != nil {
+		slog.Error("billing: failed to query active sessions", "error", err)
+		return
+	}
+	defer rows.Close()
 
-	type activeSession struct {
-		SessionID          string
-		UserID             string
-		RatePerMinuteCents int64
-		BalanceCents       int64
+	var sessions []activeSession
+	for rows.Next() {
+		var s activeSession
+		if err := rows.Scan(&s.SessionID, &s.UserID, &s.RatePerMinuteCents, &s.BalanceCents); err != nil {
+			slog.Error("billing: scan error", "error", err)
+			continue
+		}
+		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("billing: rows error", "error", err)
+		return
 	}
 
-	// TODO: Replace with real DB query
-	var sessions []activeSession
-	_ = ctx
-
+	slog.Debug("billing tick", "active_sessions", len(sessions))
 	for _, s := range sessions {
 		e.processSessionTick(ctx, s.SessionID, s.UserID, s.RatePerMinuteCents, s.BalanceCents)
 	}
 }
 
-// processSessionTick handles the billing logic for a single session tick.
-// This is the core billing invariant — no side effects if the DB update fails.
-func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID string, ratePerMinuteCents, currentBalanceCents int64) {
-	newBalance := currentBalanceCents - ratePerMinuteCents
+// processSessionTick executes billing for a single session inside a DB transaction.
+// Atomicity guarantee: balance deduction, tick record, and session total update either
+// all succeed or all roll back — no partial billing.
+func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID string, ratePerMinuteCents, _ int64) {
+	tx, err := e.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("billing: begin tx failed", "session_id", sessionID, "error", err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
 
-	// TODO: Execute in a DB transaction:
-	// 1. Deduct ratePerMinuteCents from user.balance_cents (UPDATE users SET balance_cents = balance_cents - $1 WHERE id = $2)
-	// 2. Insert billing_tick record (INSERT INTO billing_ticks ...)
-	// 3. Update session.total_charged_cents (UPDATE sessions SET total_charged_cents = total_charged_cents + $1)
-
-	if newBalance <= 0 {
-		// Balance exhausted — kill the session
-		e.killSession(ctx, sessionID)
+	var newBalance int64
+	if err := tx.QueryRow(ctx, `
+		UPDATE users SET balance_cents = balance_cents - $1, updated_at = NOW()
+		WHERE id = $2
+		RETURNING balance_cents
+	`, ratePerMinuteCents, userID).Scan(&newBalance); err != nil {
+		slog.Error("billing: deduct balance failed", "session_id", sessionID, "error", err)
 		return
 	}
 
-	// Check if warning threshold reached
-	warningThresholdMinutes := 5
-	warningThresholdCents := int64(warningThresholdMinutes) * ratePerMinuteCents
-	if newBalance < warningThresholdCents {
-		minutesRemaining := int(newBalance / ratePerMinuteCents)
-		e.sendWarning(sessionID, minutesRemaining)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO billing_ticks (session_id, amount_cents) VALUES ($1, $2)`,
+		sessionID, ratePerMinuteCents,
+	); err != nil {
+		slog.Error("billing: insert tick failed", "session_id", sessionID, "error", err)
+		return
 	}
 
-	slog.Debug("billing tick",
+	if _, err := tx.Exec(ctx, `
+		UPDATE sessions
+		SET total_charged_cents = total_charged_cents + $1, updated_at = NOW()
+		WHERE id = $2
+	`, ratePerMinuteCents, sessionID); err != nil {
+		slog.Error("billing: update session total failed", "session_id", sessionID, "error", err)
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("billing: commit failed", "session_id", sessionID, "error", err)
+		return
+	}
+
+	slog.Debug("billing tick committed",
 		"session_id", sessionID,
 		"charged_cents", ratePerMinuteCents,
 		"new_balance_cents", newBalance,
 	)
+
+	if newBalance <= 0 {
+		e.killSession(ctx, sessionID)
+		return
+	}
+
+	warningCents := int64(e.warningMinutes) * ratePerMinuteCents
+	if newBalance < warningCents {
+		minutesRemaining := int(newBalance / ratePerMinuteCents)
+		e.sendWarning(sessionID, minutesRemaining)
+	}
 }
 
-// killSession transitions a session to ENDING state and notifies the host agent.
+// killSession transitions a session to ENDING and notifies all connected clients.
 func (e *Engine) killSession(ctx context.Context, sessionID string) {
 	slog.Info("billing: killing session (balance exhausted)", "session_id", sessionID)
 
-	// TODO: UPDATE sessions SET state = 'ENDING', updated_at = NOW() WHERE id = $1
+	if _, err := e.pool.Exec(ctx, `
+		UPDATE sessions SET state = 'ENDING', updated_at = NOW()
+		WHERE id = $1 AND state = 'ACTIVE'
+	`, sessionID); err != nil {
+		slog.Error("billing: failed to set session ENDING", "session_id", sessionID, "error", err)
+	}
 
-	// Notify session participants via WebSocket
 	e.hub.SendToSession(sessionID, map[string]string{
-		"type": "session_kill",
+		"type":   "session_kill",
 		"reason": "balance_exhausted",
 	})
 }
 
-// sendWarning sends a low-balance warning to the user client.
 func (e *Engine) sendWarning(sessionID string, minutesRemaining int) {
-	slog.Info("billing: sending low balance warning",
+	slog.Info("billing: low balance warning",
 		"session_id", sessionID,
 		"minutes_remaining", minutesRemaining,
 	)
-
 	e.hub.SendToSession(sessionID, map[string]interface{}{
 		"type":              "session_warning",
 		"minutes_remaining": minutesRemaining,
