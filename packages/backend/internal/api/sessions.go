@@ -60,6 +60,20 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check the host doesn't already have an active or pending session.
+	var activeCount int
+	if err := h.deps.Pool.QueryRow(r.Context(), `
+		SELECT COUNT(*) FROM sessions
+		WHERE host_id = $1 AND state IN ('AUTHORIZED', 'ACTIVE')
+	`, req.HostID).Scan(&activeCount); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if activeCount > 0 {
+		http.Error(w, "host already has an active session", http.StatusConflict)
+		return
+	}
+
 	ratePerMinuteCents := pricePerHourCents / 60
 
 	var sessionID string

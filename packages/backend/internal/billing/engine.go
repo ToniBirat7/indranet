@@ -290,6 +290,17 @@ func (e *Engine) sweep() {
 	} else if tag2.RowsAffected() > 0 {
 		slog.Info("billing: swept abandoned CREATED sessions to FAILED", "count", tag2.RowsAffected())
 	}
+
+	// AUTHORIZED sessions older than 10 minutes → FAILED (host agent never came up).
+	// Backstop for awaitAgentReady goroutines lost across backend restarts.
+	if tag3, err3 := e.pool.Exec(ctx, `
+		UPDATE sessions SET state = 'FAILED', updated_at = NOW()
+		WHERE state = 'AUTHORIZED' AND updated_at < NOW() - INTERVAL '10 minutes'
+	`); err3 != nil {
+		slog.Error("billing: sweep stale AUTHORIZED→FAILED failed", "error", err3)
+	} else if tag3.RowsAffected() > 0 {
+		slog.Info("billing: swept stale AUTHORIZED sessions to FAILED", "count", tag3.RowsAffected())
+	}
 }
 
 // transferHostPayout creates a Stripe Transfer sending 80% (platform keeps 20%) of
