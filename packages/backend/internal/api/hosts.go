@@ -38,15 +38,12 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 	maxPriceCents, _ := strconv.ParseInt(r.URL.Query().Get("max_price_cents"), 10, 64)
 	onlineOnly := r.URL.Query().Get("online") == "1"
 
-	// Base: online=true unless overridden; filters add AND clauses
-	whereOnline := "online = true"
-	if !onlineOnly {
-		whereOnline = "(online = true OR online = false)"
-	}
-
 	args := []interface{}{}
 	argIdx := 1
-	filters := whereOnline
+	filters := "TRUE"
+	if onlineOnly {
+		filters = "online = true"
+	}
 	if minVRAM > 0 {
 		args = append(args, minVRAM)
 		filters += " AND vram_gb >= $" + strconv.Itoa(argIdx)
