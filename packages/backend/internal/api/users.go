@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ToniBirat7/indranet/packages/backend/internal/models"
@@ -71,7 +72,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		req.Email, string(hash), req.Name,
 	).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &user.BalanceCents, &user.CreatedAt)
 	if err != nil {
-		if strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "unique") {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			http.Error(w, "email already registered", http.StatusConflict)
 			return
 		}
