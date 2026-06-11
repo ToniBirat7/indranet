@@ -71,10 +71,11 @@ func (rl *rateLimiter) prune() {
 	}
 }
 
+// clientIP returns the normalized remote address.
+// chi's RealIP middleware (applied before rate limiting) has already set
+// r.RemoteAddr to the real client IP from X-Forwarded-For / X-Real-IP,
+// so we use that rather than re-reading the header (which can be a multi-IP list).
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
-	}
 	return r.RemoteAddr
 }
 
