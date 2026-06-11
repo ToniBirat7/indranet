@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -301,8 +302,30 @@ func (h *Handlers) HeartbeatSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListSessions returns the authenticated user's session history (newest first).
+// Supported query params: page (default 1), limit (default 20, max 100).
 func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value(ctxKeyUserID).(string)
+
+	limit := 20
+	offset := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if n, _ := strconv.Atoi(l); n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	if p := r.URL.Query().Get("page"); p != "" {
+		if n, _ := strconv.Atoi(p); n > 1 {
+			offset = (n - 1) * limit
+		}
+	}
+
+	var total int
+	if err := h.deps.Pool.QueryRow(r.Context(),
+		`SELECT COUNT(*) FROM sessions WHERE user_id = $1`, userID,
+	).Scan(&total); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	rows, err := h.deps.Pool.Query(r.Context(), `
 		SELECT s.id, s.host_id, h.display_name, s.state, s.rate_per_minute_cents,
@@ -311,8 +334,8 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 		JOIN hosts h ON h.id = s.host_id
 		WHERE s.user_id = $1
 		ORDER BY s.created_at DESC
-		LIMIT 20
-	`, userID)
+		LIMIT $2 OFFSET $3
+	`, userID, limit, offset)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
@@ -342,12 +365,21 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 		}
 		sessions = append(sessions, s)
 	}
+	if rows.Err() != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 	if sessions == nil {
 		sessions = []sessionSummary{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"sessions": sessions})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"sessions": sessions,
+		"total":    total,
+		"page":     offset/limit + 1,
+		"limit":    limit,
+	})
 }
 
 // GetPendingSessions returns AUTHORIZED sessions assigned to this host agent.

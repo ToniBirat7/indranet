@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ToniBirat7/indranet/packages/backend/internal/billing"
 	"github.com/ToniBirat7/indranet/packages/backend/internal/config"
@@ -63,7 +64,12 @@ func NewRouter(deps RouterDeps) http.Handler {
 	r.Use(middleware.Timeout(60 * 1000000000)) // 60s
 	r.Use(corsMiddleware(deps.Config.FrontendBaseURL))
 
-	h := &Handlers{deps: deps}
+	h := &Handlers{
+		deps:      deps,
+		authRL:    newRateLimiter(20, time.Minute),
+		sessionRL: newRateLimiter(10, time.Hour),
+		topupRL:   newRateLimiter(10, time.Hour),
+	}
 
 	// ─── Public routes ────────────────────────────────────────────────────────
 	r.Get("/health", h.Health)
@@ -123,5 +129,8 @@ func NewRouter(deps RouterDeps) http.Handler {
 
 // Handlers groups all HTTP handler methods with their shared dependencies.
 type Handlers struct {
-	deps RouterDeps
+	deps      RouterDeps
+	authRL    *rateLimiter
+	sessionRL *rateLimiter
+	topupRL   *rateLimiter
 }

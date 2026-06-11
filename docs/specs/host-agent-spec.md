@@ -4,12 +4,12 @@ The host agent is a C++ daemon that runs on the host machine and manages the ent
 
 ## Startup & Registration
 
-1. Parse CLI arguments: `--backend-url`, `--session-token`, `--sandbox-type`
+1. Parse CLI arguments: `--backend-url`, `--agent-token`, `--sandbox-type`
 2. Verify network connectivity to backend URL
-3. Authenticate with backend using session token (JWT)
-4. Retrieve session configuration: sandbox type, resource limits, game path
-5. Report machine capabilities: GPU model, VRAM, CPU, RAM, display resolution
-6. Register as ready: `POST /sessions/:id/agent-ready`
+3. Authenticate with backend using agent JWT (`--agent-token`, issued at host registration)
+4. Poll for pending sessions: `GET /v1/sessions/pending` — returns AUTHORIZED sessions for this host
+5. For each pending session: launch sandbox, begin streaming, then call `PUT /v1/sessions/{id}/start`
+6. Send host heartbeat every 60 seconds: `PUT /v1/hosts/me/heartbeat` (marks host online, resets stale timer)
 
 ## Capture Loop
 
@@ -70,12 +70,12 @@ Input events arrive on the WebRTC data channel.
 
 ## Sandbox Lifecycle
 
-1. On session AUTHORIZED:
+1. On session AUTHORIZED (discovered via `GET /v1/sessions/pending`):
    a. Create `.wsb` config file (mapped drives, networking policy, GPU access)
    b. Start Windows Sandbox process
    c. Wait for sandbox desktop to be responsive (poll via WMI or named pipe)
    d. Launch target application inside sandbox
-   e. Notify backend: `session_ready`
+   e. Notify backend: `PUT /v1/sessions/{id}/start` (transitions session to ACTIVE)
 
 2. On session ENDING (kill signal received):
    a. Send graceful terminate to application inside sandbox
@@ -92,10 +92,12 @@ Input events arrive on the WebRTC data channel.
 
 ## Billing Heartbeat
 
-1. Every 30 seconds: send heartbeat to backend (`PUT /sessions/:id/heartbeat`)
-2. If backend returns `KILL` in heartbeat response: begin session teardown
-3. If heartbeat fails 3 times consecutively: log error, continue session (network hiccup tolerance)
-4. If heartbeat fails 10 times consecutively: treat as backend disconnect, end session gracefully
+1. Every 60 seconds: send session heartbeat (`PUT /v1/sessions/{id}/heartbeat`)
+   - Response `action: "kill"` → begin session teardown
+   - Response `action: "continue"` → keep running
+2. Every 60 seconds: send host heartbeat (`PUT /v1/hosts/me/heartbeat`) — separate from session heartbeat; keeps host marked online
+3. If either heartbeat fails 3 times consecutively: log error, continue (network hiccup tolerance)
+4. If either heartbeat fails 10 times consecutively: treat as backend disconnect, end session gracefully
 
 ## Graceful Shutdown
 

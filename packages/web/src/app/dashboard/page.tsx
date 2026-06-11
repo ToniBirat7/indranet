@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const topupStatus = searchParams.get('topup')
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
+  const [sessionTotal, setSessionTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [toppingUp, setToppingUp] = useState(false)
   const [topupNotice, setTopupNotice] = useState<string | null>(
@@ -44,6 +45,7 @@ export default function DashboardPage() {
       .then(([p, s]) => {
         setProfile(p)
         setSessions(s.sessions)
+        setSessionTotal(s.total)
       })
       .catch(() => router.push('/auth/login?return=/dashboard'))
       .finally(() => setLoading(false))
@@ -120,7 +122,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-gray-900 rounded-lg p-6">
           <p className="text-gray-400 text-sm">Total Sessions</p>
-          <p className="text-2xl font-bold text-white">{sessions.length}</p>
+          <p className="text-2xl font-bold text-white">{sessionTotal}</p>
         </div>
         <div className="bg-gray-900 rounded-lg p-6">
           <p className="text-gray-400 text-sm">Hours Used</p>

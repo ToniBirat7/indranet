@@ -111,6 +111,31 @@ Get host details.
 
 ## Sessions
 
+### GET /sessions
+Returns the authenticated user's session history. Authenticated.
+
+**Query params:** `page` (default 1), `limit` (default 20, max 100)
+
+**Response 200:**
+```json
+{
+  "sessions": [{ "session_id": "ses_...", "host_name": "...", "state": "ENDED", ... }],
+  "total": 42,
+  "page": 1,
+  "limit": 20
+}
+```
+
+### GET /sessions/pending
+Returns AUTHORIZED sessions assigned to this host. **Agent-authenticated** (agent JWT issued at host registration).
+
+**Response 200:**
+```json
+{
+  "sessions": [{ "session_id": "ses_...", "user_id": "usr_...", "rate_per_minute_cents": 5, "pre_auth_minutes": 60 }]
+}
+```
+
 ### POST /sessions
 Create a new session (initiates payment flow). Authenticated.
 
@@ -127,18 +152,19 @@ Create a new session (initiates payment flow). Authenticated.
 {
   "session_id": "ses_01H...",
   "state": "CREATED",
-  "checkout_url": "https://checkout.stripe.com/pay/...",
-  "expires_at": "2025-05-14T15:30:00Z"
+  "checkout_url": "https://checkout.stripe.com/pay/..."
 }
 ```
 
+Dev mode (no `STRIPE_SECRET_KEY`): state is `AUTHORIZED`, no checkout_url.
+
 ### PUT /sessions/:id/start
-Called by host agent after sandbox is ready. Agent-authenticated (agent JWT).
+Called by host agent after sandbox is ready. **Agent-authenticated.**
 
 **Response 200:** `{ "state": "ACTIVE" }`
 
 ### PUT /sessions/:id/heartbeat
-Called by host agent every 30s to report liveness. Agent-authenticated.
+Called by host agent every 60s to report liveness. **Agent-authenticated.**
 
 **Response 200:** `{ "action": "continue" }` or `{ "action": "kill" }`
 

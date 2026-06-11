@@ -69,10 +69,12 @@ export const api = {
       }),
   },
   sessions: {
-    list: (token: string) =>
-      apiFetch<{ sessions: SessionSummary[] }>('/sessions', {
+    list: (token: string, params?: { page?: number; limit?: number }) => {
+      const qs = params ? '?' + new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString() : ''
+      return apiFetch<{ sessions: SessionSummary[]; total: number; page: number; limit: number }>(`/sessions${qs}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }),
+      })
+    },
     create: (body: { host_id: string; duration_minutes: number }, token: string) =>
       apiFetch<{ session_id: string; state: string; checkout_url?: string }>('/sessions', {
         method: 'POST',
