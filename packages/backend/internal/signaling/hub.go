@@ -16,6 +16,7 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan sessionMessage
+	stopCh     chan struct{}
 }
 
 // Session holds the two WebSocket clients for a signaling session.
@@ -37,6 +38,7 @@ func NewHub() *Hub {
 		register:   make(chan *Client, 16),
 		unregister: make(chan *Client, 16),
 		broadcast:  make(chan sessionMessage, 256),
+		stopCh:     make(chan struct{}),
 	}
 }
 
@@ -46,14 +48,19 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.addClient(client)
-
 		case client := <-h.unregister:
 			h.removeClient(client)
-
 		case msg := <-h.broadcast:
 			h.relayMessage(msg)
+		case <-h.stopCh:
+			return
 		}
 	}
+}
+
+// Stop signals the Hub's Run loop to exit.
+func (h *Hub) Stop() {
+	close(h.stopCh)
 }
 
 func (h *Hub) addClient(c *Client) {

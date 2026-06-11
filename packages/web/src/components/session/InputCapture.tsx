@@ -76,10 +76,10 @@ export default function InputCapture({ dataChannel }: Props) {
     window.addEventListener('gamepadconnected', onGamepadConnected)
     window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
 
-    // Track pointer lock state
-    document.addEventListener('pointerlockchange', () => {
+    const handlePointerLockChange = () => {
       locked.current = document.pointerLockElement !== null
-    })
+    }
+    document.addEventListener('pointerlockchange', handlePointerLockChange)
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
@@ -88,6 +88,7 @@ export default function InputCapture({ dataChannel }: Props) {
       document.removeEventListener('mousedown', handleMouseDown)
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('wheel', handleWheel)
+      document.removeEventListener('pointerlockchange', handlePointerLockChange)
       window.removeEventListener('gamepadconnected', onGamepadConnected)
       window.removeEventListener('gamepaddisconnected', onGamepadDisconnected)
       if (gamepollId !== null) cancelAnimationFrame(gamepollId)

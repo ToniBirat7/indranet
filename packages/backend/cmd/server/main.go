@@ -114,7 +114,8 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	billingEngine.Stop()
+	billingEngine.Stop() // stop billing before hub so no more SendToSession calls
+	hub.Stop()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server forced shutdown", "error", err)
