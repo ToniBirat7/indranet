@@ -29,12 +29,21 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 		httpStatus = http.StatusServiceUnavailable
 	}
 
+	poolStat := h.deps.Pool.Stat()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(map[string]string{
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":   status,
 		"postgres": pgStatus,
 		"redis":    redisStatus,
 		"version":  "0.1.0",
+		"pool": map[string]int32{
+			"total_conns":      poolStat.TotalConns(),
+			"idle_conns":       poolStat.IdleConns(),
+			"acquired_conns":   poolStat.AcquiredConns(),
+			"constructing_conns": poolStat.ConstructingConns(),
+			"max_conns":        poolStat.MaxConns(),
+		},
 	})
 }

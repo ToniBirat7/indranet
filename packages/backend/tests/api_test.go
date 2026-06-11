@@ -20,12 +20,15 @@ func TestHealthEndpoint(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
-	var resp map[string]string
+	var resp map[string]interface{}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if resp["status"] != "ok" {
-		t.Errorf("expected status=ok, got %q", resp["status"])
+		t.Errorf("expected status=ok, got %v", resp["status"])
+	}
+	if resp["pool"] == nil {
+		t.Error("expected 'pool' field in health response")
 	}
 }
 
