@@ -18,6 +18,7 @@ import (
 )
 
 // ListHosts returns online host machines, sorted by rating then price.
+// Supported query params: min_vram (int GB), max_price_cents (int), online (1 = online only), page, limit.
 func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	offset := 0
@@ -32,17 +33,44 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rows, err := h.deps.Pool.Query(r.Context(), `
+	// Build optional filter clauses
+	minVRAM, _ := strconv.Atoi(r.URL.Query().Get("min_vram"))
+	maxPriceCents, _ := strconv.ParseInt(r.URL.Query().Get("max_price_cents"), 10, 64)
+	onlineOnly := r.URL.Query().Get("online") == "1"
+
+	// Base: online=true unless overridden; filters add AND clauses
+	whereOnline := "online = true"
+	if !onlineOnly {
+		whereOnline = "(online = true OR online = false)"
+	}
+
+	args := []interface{}{}
+	argIdx := 1
+	filters := whereOnline
+	if minVRAM > 0 {
+		args = append(args, minVRAM)
+		filters += " AND vram_gb >= $" + strconv.Itoa(argIdx)
+		argIdx++
+	}
+	if maxPriceCents > 0 {
+		args = append(args, maxPriceCents)
+		filters += " AND price_per_hour_cents <= $" + strconv.Itoa(argIdx)
+		argIdx++
+	}
+	args = append(args, limit, offset)
+
+	query := `
 		SELECT id, user_id, display_name, gpu_model, vram_gb, cpu_model, ram_gb,
 		       os, price_per_hour_cents, tags, online, payouts_enabled,
 		       total_sessions, rating_sum, rating_count, created_at
 		FROM hosts
-		WHERE online = true
+		WHERE ` + filters + `
 		ORDER BY
 		  CASE WHEN rating_count > 0 THEN rating_sum::float / rating_count ELSE 0 END DESC,
 		  price_per_hour_cents ASC
-		LIMIT $1 OFFSET $2
-	`, limit, offset)
+		LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
+
+	rows, err := h.deps.Pool.Query(r.Context(), query, args...)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return

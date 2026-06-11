@@ -1,7 +1,11 @@
 import HostGrid from '@/components/marketplace/HostGrid'
 import FilterBar from '@/components/marketplace/FilterBar'
 
-export default function HomePage() {
+interface Props {
+  searchParams?: Record<string, string>
+}
+
+export default function HomePage({ searchParams }: Props) {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
@@ -14,7 +18,7 @@ export default function HomePage() {
       </div>
 
       <FilterBar />
-      <HostGrid />
+      <HostGrid searchParams={searchParams} />
     </div>
   )
 }
