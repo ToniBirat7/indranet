@@ -267,7 +267,7 @@ func (h *Handlers) HostHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := h.deps.Pool.Exec(r.Context(), `
-		UPDATE hosts SET updated_at = NOW() WHERE id = $1
+		UPDATE hosts SET online = true, updated_at = NOW() WHERE id = $1
 	`, hostID); err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return

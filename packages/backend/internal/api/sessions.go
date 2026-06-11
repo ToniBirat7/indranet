@@ -156,8 +156,8 @@ func (h *Handlers) createStripeCheckout(sessionID string, durationMinutes int, r
 		PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
 			Metadata: map[string]string{"indranet_session_id": sessionID},
 		},
-		SuccessURL: stripe.String(h.deps.Config.FrontendBaseURL + "/sessions/" + sessionID + "?payment=success"),
-		CancelURL:  stripe.String(h.deps.Config.FrontendBaseURL + "/sessions/" + sessionID + "?payment=cancelled"),
+		SuccessURL: stripe.String(h.deps.Config.FrontendBaseURL + "/session/" + sessionID + "?payment=success"),
+		CancelURL:  stripe.String(h.deps.Config.FrontendBaseURL + "/session/" + sessionID + "?payment=cancelled"),
 	}
 
 	cs, err := stripecs.New(params)
