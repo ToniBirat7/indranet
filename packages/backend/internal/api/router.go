@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/ToniBirat7/indranet/packages/backend/internal/billing"
 	"github.com/ToniBirat7/indranet/packages/backend/internal/config"
@@ -21,6 +22,35 @@ type RouterDeps struct {
 	Billing *billing.Engine
 }
 
+// corsMiddleware adds CORS headers for the web frontend.
+// Allowed origins are the frontend base URL and localhost variants for dev.
+func corsMiddleware(frontendURL string) func(http.Handler) http.Handler {
+	allowed := []string{
+		frontendURL,
+		"http://localhost:3000",
+		"http://127.0.0.1:3000",
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			for _, o := range allowed {
+				if strings.EqualFold(origin, o) {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // NewRouter creates and configures the HTTP router with all API routes.
 func NewRouter(deps RouterDeps) http.Handler {
 	r := chi.NewRouter()
@@ -31,6 +61,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * 1000000000)) // 60s
+	r.Use(corsMiddleware(deps.Config.FrontendBaseURL))
 
 	h := &Handlers{deps: deps}
 

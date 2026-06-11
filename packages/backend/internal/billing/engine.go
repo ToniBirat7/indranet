@@ -216,11 +216,16 @@ func (e *Engine) sweep() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// ENDING sessions older than 5 minutes → ENDED (agent teardown already complete or timed out).
+	// ENDING sessions older than 5 minutes → ENDED; increment host session count.
 	tag, err := e.pool.Exec(ctx, `
-		UPDATE sessions
-		SET state = 'ENDED', ended_at = NOW(), updated_at = NOW()
-		WHERE state = 'ENDING' AND updated_at < NOW() - INTERVAL '5 minutes'
+		WITH ended AS (
+			UPDATE sessions
+			SET state = 'ENDED', ended_at = NOW(), updated_at = NOW()
+			WHERE state = 'ENDING' AND updated_at < NOW() - INTERVAL '5 minutes'
+			RETURNING host_id
+		)
+		UPDATE hosts SET total_sessions = total_sessions + 1, updated_at = NOW()
+		FROM ended WHERE hosts.id = ended.host_id
 	`)
 	if err != nil {
 		slog.Error("billing: sweep ENDING→ENDED failed", "error", err)

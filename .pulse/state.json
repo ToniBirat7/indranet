@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "441b2f3",
-      "subject": "fix: wallet credit on payment, host lifecycle, session sweep",
-      "authoredAt": "2026-06-11T06:38:37+00:00",
+      "sha": "842acf7",
+      "subject": "security: JWT auth gate on WebRTC signaling endpoint",
+      "authoredAt": "2026-06-11T06:41:58+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:38:37+00:00",
+      "lastCommitAt": "2026-06-11T06:41:58+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 12,
-    "commitsLast30d": 14,
+    "commitsLast7d": 13,
+    "commitsLast30d": 15,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,30 +223,40 @@
       0,
       0,
       2,
-      10
+      11
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 14,
+    "activityTotal90d": 15,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 14
+        "commits": 15
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:41:06.650077+00:00",
+  "generatedAt": "2026-06-11T06:43:28.882968+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "441b2f3",
+      "sha": "842acf7",
       "parents": [
-        "542c2ee"
+        "441b2f3"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "security: JWT auth gate on WebRTC signaling endpoint",
+      "at": "2026-06-11T06:41:58+00:00"
+    },
+    {
+      "sha": "441b2f3",
+      "parents": [
+        "542c2ee"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "fix: wallet credit on payment, host lifecycle, session sweep",
       "at": "2026-06-11T06:38:37+00:00"
