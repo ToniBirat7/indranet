@@ -1,17 +1,22 @@
 'use client'
 
 import { useEffect, useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api, UserProfile } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 
 export default function HostDashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const stripeStatus = searchParams.get('stripe')
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState(false)
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [agentToken, setAgentToken] = useState<string | null>(null)
+  const [stripeNotice] = useState<string | null>(
+    stripeStatus === 'success' ? 'Stripe account connected. Payouts enabled once Stripe verifies your account.' : null,
+  )
 
   // Form state
   const [displayName, setDisplayName] = useState('')
@@ -85,6 +90,12 @@ export default function HostDashboardPage() {
       <p className="text-gray-400 mb-8">
         Register your machine to start earning by renting GPU compute time.
       </p>
+
+      {stripeNotice && (
+        <div className="mb-6 bg-green-900/40 border border-green-700 text-green-300 text-sm px-4 py-3 rounded-lg">
+          {stripeNotice}
+        </div>
+      )}
 
       {profile?.host_id ? (
         <RegisteredView hostId={profile.host_id} agentToken={agentToken} />
@@ -185,6 +196,23 @@ export default function HostDashboardPage() {
 }
 
 function RegisteredView({ hostId, agentToken }: { hostId: string; agentToken: string | null }) {
+  const [connectingStripe, setConnectingStripe] = useState(false)
+  const [stripeError, setStripeError] = useState<string | null>(null)
+
+  async function handleConnectStripe() {
+    const token = getToken()
+    if (!token) return
+    setConnectingStripe(true)
+    setStripeError(null)
+    try {
+      const res = await api.hosts.connectStripe(token)
+      window.location.href = res.onboarding_url
+    } catch (err) {
+      setStripeError(err instanceof Error ? err.message : 'Failed to start Stripe onboarding')
+      setConnectingStripe(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-green-900/20 border border-green-700 rounded-xl p-6">
@@ -209,8 +237,24 @@ function RegisteredView({ hostId, agentToken }: { hostId: string; agentToken: st
       )}
 
       <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+        <h3 className="text-white font-semibold mb-2">Receive payouts</h3>
+        <p className="text-gray-400 text-sm mb-4">
+          Connect your Stripe account to receive 80% of session earnings directly to your bank.
+        </p>
+        {stripeError && <p className="text-red-400 text-sm mb-3">{stripeError}</p>}
+        <button
+          onClick={handleConnectStripe}
+          disabled={connectingStripe}
+          className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+        >
+          {connectingStripe ? 'Redirecting…' : 'Connect Stripe account'}
+        </button>
+      </div>
+
+      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
         <h3 className="text-white font-semibold mb-3">Next steps</h3>
         <ol className="text-gray-400 text-sm space-y-2 list-decimal list-inside">
+          <li>Connect your Stripe account above to enable payouts</li>
           <li>Download the IndraNet host agent for Windows</li>
           <li>Paste the agent token into the agent config</li>
           <li>Run the agent — it will register your GPU and go online</li>
