@@ -27,7 +27,7 @@ export const api = {
   },
   sessions: {
     create: (body: { host_id: string; duration_minutes: number }, token: string) =>
-      apiFetch<{ session_id: string; checkout_url: string }>('/sessions', {
+      apiFetch<{ session_id: string; state: string; checkout_url?: string }>('/sessions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
