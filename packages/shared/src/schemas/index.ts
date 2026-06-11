@@ -23,28 +23,21 @@ export const LoginSchema = z.object({
   password: z.string().min(1),
 })
 
-export const InputEventSchema = z.discriminatedUnion('type', [
+// InputEventSchema matches the compact wire format sent over RTCDataChannel.
+// Keys use single-char shorthand to minimise JSON overhead on the 60fps data path.
+export const InputEventSchema = z.discriminatedUnion('t', [
+  z.object({ t: z.literal('k'), e: z.enum(['d', 'u']), c: z.string(), k: z.number().int() }),
+  z.object({ t: z.literal('m'), dx: z.number(), dy: z.number() }),
+  z.object({ t: z.literal('mb'), e: z.enum(['d', 'u']), b: z.number().int() }),
+  z.object({ t: z.literal('mw'), d: z.number() }),
   z.object({
-    type: z.literal('keyboard'),
-    action: z.enum(['down', 'up']),
-    key: z.number().int(),
-    modifiers: z.number().int().default(0),
-  }),
-  z.object({
-    type: z.literal('mouse'),
-    dx: z.number(),
-    dy: z.number(),
-    buttons: z.number().int().default(0),
-    wheel: z.number().default(0),
-  }),
-  z.object({
-    type: z.literal('gamepad'),
-    leftX: z.number().min(-1).max(1),
-    leftY: z.number().min(-1).max(1),
-    rightX: z.number().min(-1).max(1),
-    rightY: z.number().min(-1).max(1),
-    buttons: z.number().int(),
-    leftTrigger: z.number().min(0).max(1),
-    rightTrigger: z.number().min(0).max(1),
+    t: z.literal('gp'),
+    lx: z.number().min(-1).max(1),
+    ly: z.number().min(-1).max(1),
+    rx: z.number().min(-1).max(1),
+    ry: z.number().min(-1).max(1),
+    bt: z.number().int(),
+    lt: z.number().min(0).max(1),
+    rt: z.number().min(0).max(1),
   }),
 ])
