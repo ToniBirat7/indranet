@@ -15,7 +15,11 @@ export default function HostDashboardPage() {
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [agentToken, setAgentToken] = useState<string | null>(null)
   const [stripeNotice] = useState<string | null>(
-    stripeStatus === 'success' ? 'Stripe account connected. Payouts enabled once Stripe verifies your account.' : null,
+    stripeStatus === 'success'
+      ? 'Stripe account connected. Payouts enabled once Stripe verifies your account.'
+      : stripeStatus === 'refresh'
+      ? 'Stripe onboarding was not completed. Click "Connect Stripe account" to try again.'
+      : null,
   )
 
   // Form state
@@ -48,8 +52,8 @@ export default function HostDashboardPage() {
     if (!token) return
 
     const priceCents = Math.round(parseFloat(pricePerHour) * 100)
-    if (isNaN(priceCents) || priceCents <= 0) {
-      setRegisterError('Invalid price')
+    if (isNaN(priceCents) || priceCents < 60) {
+      setRegisterError('Minimum price is $0.60/hour')
       return
     }
 
@@ -161,7 +165,7 @@ export default function HostDashboardPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                   <input
-                    type="number" step="0.01" min="0.01" value={pricePerHour}
+                    type="number" step="0.01" min="0.60" value={pricePerHour}
                     onChange={(e) => setPricePerHour(e.target.value)}
                     className={`${inputClass} pl-7`}
                   />
