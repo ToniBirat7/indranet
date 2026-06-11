@@ -386,7 +386,16 @@ func (h *Handlers) Signal(w http.ResponseWriter, r *http.Request) {
 		err := h.deps.Pool.QueryRow(r.Context(),
 			`SELECT user_id FROM sessions WHERE id = $1`, sessionID,
 		).Scan(&ownerID)
-		if err != nil || ownerID != claims.UserID {
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				slog.Error("Signal: DB error checking session owner", "session_id", sessionID, "error", err)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if ownerID != claims.UserID {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
@@ -399,7 +408,16 @@ func (h *Handlers) Signal(w http.ResponseWriter, r *http.Request) {
 		err := h.deps.Pool.QueryRow(r.Context(),
 			`SELECT host_id FROM sessions WHERE id = $1`, sessionID,
 		).Scan(&hostID)
-		if err != nil || hostID != claims.UserID {
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				slog.Error("Signal: DB error checking session host", "session_id", sessionID, "error", err)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if hostID != claims.UserID {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}

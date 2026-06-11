@@ -439,6 +439,11 @@ func (h *Handlers) GetPendingSessions(w http.ResponseWriter, r *http.Request) {
 		}
 		pending = append(pending, s)
 	}
+	if err := rows.Err(); err != nil {
+		slog.Error("GetPendingSessions: rows error", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 	if pending == nil {
 		pending = []pendingSession{}
 	}
