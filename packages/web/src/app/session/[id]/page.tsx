@@ -141,9 +141,12 @@ export default function SessionPage({ params }: { params: { id: string } }) {
                 <button
                   onClick={async () => {
                     const token = getToken()
-                    if (token) {
-                      await api.sessions.rate(params.id, rating, token).catch(() => {})
+                    if (!token) return
+                    try {
+                      await api.sessions.rate(params.id, rating, token)
                       setRatingSubmitted(true)
+                    } catch {
+                      // session may still be transitioning to ENDED — stay on page
                     }
                   }}
                   className="bg-brand-600 hover:bg-brand-700 px-5 py-1.5 rounded-lg text-sm mb-2 transition-colors"
