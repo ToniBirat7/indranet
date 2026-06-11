@@ -40,6 +40,10 @@ func Load() *Config {
 	}
 
 	if cfg.JWTSecret == "" {
+		if cfg.Env != "development" {
+			slog.Error("JWT_SECRET is required in non-development environments")
+			os.Exit(1)
+		}
 		slog.Warn("JWT_SECRET not set — using insecure default (dev only)")
 		cfg.JWTSecret = "dev-secret-do-not-use-in-production"
 	}
@@ -47,6 +51,18 @@ func Load() *Config {
 	if cfg.StripeSecretKey == "" && cfg.Env != "development" {
 		slog.Error("STRIPE_SECRET_KEY is required in non-development environments")
 		os.Exit(1)
+	}
+
+	if cfg.StripePlatformFeePercent < 0 || cfg.StripePlatformFeePercent > 100 {
+		slog.Error("STRIPE_PLATFORM_FEE_PERCENT must be between 0 and 100",
+			"value", cfg.StripePlatformFeePercent)
+		os.Exit(1)
+	}
+
+	if cfg.BillingTickSeconds < 1 {
+		slog.Warn("SESSION_BILLING_TICK_SECONDS must be ≥1, defaulting to 60",
+			"value", cfg.BillingTickSeconds)
+		cfg.BillingTickSeconds = 60
 	}
 
 	return cfg
