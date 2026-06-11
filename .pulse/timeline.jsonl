@@ -27,3 +27,4 @@
 {"id": "commit:d8facce", "type": "commit", "at": "2026-06-11T06:45:25+00:00", "summary": "fix: complete Tailwind brand palette, register AgentState in Tauri"}
 {"id": "commit:5515d7b", "type": "commit", "at": "2026-06-11T06:49:08+00:00", "summary": "feat: complete Tauri client scaffold with Vite entry points"}
 {"id": "commit:1f0d6f4", "type": "commit", "at": "2026-06-11T06:50:12+00:00", "summary": "security: in-memory rate limiting for auth endpoints"}
+{"id": "commit:dcedd54", "type": "commit", "at": "2026-06-11T06:52:06+00:00", "summary": "refactor: align shared types/schemas with Go API contract"}

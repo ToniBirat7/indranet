@@ -62,12 +62,12 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "1f0d6f4",
-      "subject": "security: in-memory rate limiting for auth endpoints",
-      "authoredAt": "2026-06-11T06:50:12+00:00",
+      "sha": "dcedd54",
+      "subject": "refactor: align shared types/schemas with Go API contract",
+      "authoredAt": "2026-06-11T06:52:06+00:00",
       "ageDays": 0.0
     },
-    "dirty": true,
+    "dirty": false,
     "ahead": 0,
     "behind": 0,
     "ci": "pending"
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:50:12+00:00",
+      "lastCommitAt": "2026-06-11T06:52:06+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 17,
-    "commitsLast30d": 19,
+    "commitsLast7d": 18,
+    "commitsLast30d": 20,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,30 +223,40 @@
       0,
       0,
       2,
-      15
+      16
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 19,
+    "activityTotal90d": 20,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 19
+        "commits": 20
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:51:27.471216+00:00",
+  "generatedAt": "2026-06-11T06:52:27.575086+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "1f0d6f4",
+      "sha": "dcedd54",
       "parents": [
-        "5515d7b"
+        "1f0d6f4"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "refactor: align shared types/schemas with Go API contract",
+      "at": "2026-06-11T06:52:06+00:00"
+    },
+    {
+      "sha": "1f0d6f4",
+      "parents": [
+        "5515d7b"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "security: in-memory rate limiting for auth endpoints",
       "at": "2026-06-11T06:50:12+00:00"

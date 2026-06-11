@@ -1,4 +1,4 @@
-.PHONY: dev build test lint clean migrate
+.PHONY: dev build test lint clean
 
 dev:
 	@echo "Starting backend with hot reload..."
@@ -16,11 +16,7 @@ lint:
 clean:
 	rm -rf bin/
 
-migrate:
-	@echo "Running database migrations..."
-	@for f in internal/db/migrations/*.sql; do \
-		echo "Applying $$f..."; \
-		psql "$$DATABASE_URL" < "$$f"; \
-	done
+# Migrations run automatically on server startup via embedded SQL files.
+# To reset: use scripts/reset-db.sh and restart the backend.
 
 .DEFAULT_GOAL := build
