@@ -10,6 +10,7 @@ import (
 	"github.com/ToniBirat7/indranet/packages/backend/internal/signaling"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -23,14 +24,19 @@ type RouterDeps struct {
 	Billing *billing.Engine
 }
 
-// corsMiddleware adds CORS headers for the web frontend.
-// Allowed origins are the frontend base URL and localhost variants for dev.
-func corsMiddleware(frontendURL string) func(http.Handler) http.Handler {
-	allowed := []string{
+// allowedOrigins returns the set of origins permitted for CORS and WebSocket upgrades.
+func allowedOrigins(frontendURL string) []string {
+	return []string{
 		frontendURL,
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
 	}
+}
+
+// corsMiddleware adds CORS headers for the web frontend.
+// Allowed origins are the frontend base URL and localhost variants for dev.
+func corsMiddleware(frontendURL string) func(http.Handler) http.Handler {
+	allowed := allowedOrigins(frontendURL)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
@@ -52,6 +58,16 @@ func corsMiddleware(frontendURL string) func(http.Handler) http.Handler {
 	}
 }
 
+// securityHeadersMiddleware sets defensive HTTP headers on every response.
+func securityHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // NewRouter creates and configures the HTTP router with all API routes.
 func NewRouter(deps RouterDeps) http.Handler {
 	r := chi.NewRouter()
@@ -63,12 +79,27 @@ func NewRouter(deps RouterDeps) http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * 1000000000)) // 60s
 	r.Use(corsMiddleware(deps.Config.FrontendBaseURL))
+	r.Use(securityHeadersMiddleware)
 
+	origins := allowedOrigins(deps.Config.FrontendBaseURL)
 	h := &Handlers{
 		deps:      deps,
 		authRL:    newRateLimiter(20, time.Minute),
 		sessionRL: newRateLimiter(10, time.Hour),
 		topupRL:   newRateLimiter(10, time.Hour),
+		wsUpgrader: websocket.Upgrader{
+			ReadBufferSize:  4096,
+			WriteBufferSize: 4096,
+			CheckOrigin: func(r *http.Request) bool {
+				origin := r.Header.Get("Origin")
+				for _, o := range origins {
+					if strings.EqualFold(origin, o) {
+						return true
+					}
+				}
+				return false
+			},
+		},
 	}
 
 	// ─── Public routes ────────────────────────────────────────────────────────
@@ -130,8 +161,9 @@ func NewRouter(deps RouterDeps) http.Handler {
 
 // Handlers groups all HTTP handler methods with their shared dependencies.
 type Handlers struct {
-	deps      RouterDeps
-	authRL    *rateLimiter
-	sessionRL *rateLimiter
-	topupRL   *rateLimiter
+	deps       RouterDeps
+	authRL     *rateLimiter
+	sessionRL  *rateLimiter
+	topupRL    *rateLimiter
+	wsUpgrader websocket.Upgrader
 }

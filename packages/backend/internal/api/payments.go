@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
 	stripe "github.com/stripe/stripe-go/v76"
 	stripecs "github.com/stripe/stripe-go/v76/checkout/session"
@@ -104,14 +103,19 @@ func (h *Handlers) handleSessionCheckoutComplete(ctx context.Context, cs stripe.
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
+	var paymentIntentID string
+	if cs.PaymentIntent != nil {
+		paymentIntentID = cs.PaymentIntent.ID
+	}
+
 	var userID string
 	var totalCents int64
 	err = tx.QueryRow(ctx, `
 		UPDATE sessions
-		SET state = 'AUTHORIZED', stripe_checkout_id = $1, updated_at = NOW()
-		WHERE id = $2 AND state = 'CREATED'
+		SET state = 'AUTHORIZED', stripe_checkout_id = $1, stripe_payment_intent_id = $2, updated_at = NOW()
+		WHERE id = $3 AND state = 'CREATED'
 		RETURNING user_id, rate_per_minute_cents * pre_auth_minutes
-	`, cs.ID, internalSessionID).Scan(&userID, &totalCents)
+	`, cs.ID, paymentIntentID, internalSessionID).Scan(&userID, &totalCents)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			slog.Warn("stripe: session not in CREATED state, ignoring duplicate webhook",
@@ -319,12 +323,6 @@ func (h *Handlers) awaitAgentReady(sessionID string, timeout time.Duration) {
 	}
 }
 
-var wsUpgrader = websocket.Upgrader{
-	ReadBufferSize:  4096,
-	WriteBufferSize: 4096,
-	CheckOrigin:     func(r *http.Request) bool { return true },
-}
-
 // Signal handles WebSocket connections for WebRTC signaling.
 // ?role=host|viewer&token=<jwt> — token is validated before upgrade.
 // Security invariant: every WebSocket connection must carry a valid JWT.
@@ -381,7 +379,7 @@ func (h *Handlers) Signal(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	conn, err := wsUpgrader.Upgrade(w, r, nil)
+	conn, err := h.wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("websocket upgrade failed", "session_id", sessionID, "error", err)
 		return
