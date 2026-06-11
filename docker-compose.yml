@@ -10,6 +10,7 @@ volumes:
   nats-data:
   minio-data:
   pgadmin-data:
+  go-pkg-cache:
 
 services:
 
@@ -123,3 +124,96 @@ services:
         condition: service_healthy
     networks:
       - indranet-net
+
+  # ── App services (profile: dev) ──────────────────────────────────────────
+
+  backend-dev:
+    build:
+      context: packages/backend
+      dockerfile: Dockerfile.dev
+    container_name: indranet-backend-dev
+    restart: unless-stopped
+    volumes:
+      - ./packages/backend:/app
+      - go-pkg-cache:/root/go/pkg/mod
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://indranet:changeme@postgres:5432/indranet?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    networks:
+      - indranet-net
+    profiles: [dev]
+
+  # ── App services (profile: prod) ─────────────────────────────────────────
+
+  backend:
+    build:
+      context: packages/backend
+      dockerfile: Dockerfile
+    container_name: indranet-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://indranet:changeme@postgres:5432/indranet?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    networks:
+      - indranet-net
+    profiles: [prod]
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    container_name: indranet-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - indranet-net
+    profiles: [prod]
+
+  # ── PoC services (profile: poc) ───────────────────────────────────────────
+
+  poc-02:
+    build:
+      context: poc/02-webrtc-stream
+      dockerfile: Dockerfile
+    container_name: indranet-poc02
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    networks:
+      - indranet-net
+    profiles: [poc]
+
+  poc-04:
+    build:
+      context: poc/04-payment-gate
+      dockerfile: Dockerfile
+    container_name: indranet-poc04
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8082:8080"
+    networks:
+      - indranet-net
+    profiles: [poc]

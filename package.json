@@ -3,11 +3,6 @@
   "version": "0.0.1",
   "private": true,
   "description": "Indra's Net — Peer-to-peer interactive compute marketplace",
-  "workspaces": [
-    "packages/web",
-    "packages/client",
-    "packages/shared"
-  ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

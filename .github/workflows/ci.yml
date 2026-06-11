@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: packages/backend
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  verify-backend:
+    name: Verify Go Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: go build + vet
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/packages/backend:/app \
+            -w /app \
+            golang:1.22-alpine \
+            sh -c "go build ./... && go vet ./..."
+
+  build-poc-02:
+    name: Build PoC 02 (WebRTC Signal)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build PoC 02 image
+        uses: docker/build-push-action@v5
+        with:
+          context: poc/02-webrtc-stream
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-poc-04:
+    name: Build PoC 04 (Payment Gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build PoC 04 image
+        uses: docker/build-push-action@v5
+        with:
+          context: poc/04-payment-gate
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/web/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://localhost:8080
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
