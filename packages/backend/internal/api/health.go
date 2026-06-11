@@ -23,12 +23,14 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := "ok"
+	httpStatus := http.StatusOK
 	if pgStatus != "ok" || redisStatus != "ok" {
 		status = "degraded"
-		w.WriteHeader(http.StatusServiceUnavailable)
+		httpStatus = http.StatusServiceUnavailable
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatus)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   status,
 		"postgres": pgStatus,

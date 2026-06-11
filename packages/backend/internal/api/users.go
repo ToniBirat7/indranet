@@ -235,6 +235,10 @@ func (h *Handlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		FROM users u WHERE u.id = $1
 	`, userID).Scan(&id, &email, &name, &role, &balanceCents, &hostID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
