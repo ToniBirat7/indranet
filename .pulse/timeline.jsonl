@@ -25,3 +25,4 @@
 {"id": "commit:842acf7", "type": "commit", "at": "2026-06-11T06:41:58+00:00", "summary": "security: JWT auth gate on WebRTC signaling endpoint"}
 {"id": "commit:ecd09d0", "type": "commit", "at": "2026-06-11T06:43:43+00:00", "summary": "feat: CORS middleware, host session counter, sweep improvements"}
 {"id": "commit:d8facce", "type": "commit", "at": "2026-06-11T06:45:25+00:00", "summary": "fix: complete Tailwind brand palette, register AgentState in Tauri"}
+{"id": "commit:5515d7b", "type": "commit", "at": "2026-06-11T06:49:08+00:00", "summary": "feat: complete Tauri client scaffold with Vite entry points"}

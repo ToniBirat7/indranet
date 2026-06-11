@@ -69,9 +69,12 @@ func NewRouter(deps RouterDeps) http.Handler {
 	r.Get("/health", h.Health)
 
 	r.Route("/v1", func(r chi.Router) {
-		// Auth
-		r.Post("/auth/register", h.Register)
-		r.Post("/auth/login", h.Login)
+		// Auth (rate-limited: 20 req/min per IP)
+		r.Group(func(r chi.Router) {
+			r.Use(h.authRateLimitMiddleware)
+			r.Post("/auth/register", h.Register)
+			r.Post("/auth/login", h.Login)
+		})
 
 		// Hosts (browse — no auth)
 		r.Get("/hosts", h.ListHosts)

@@ -62,12 +62,12 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "d8facce",
-      "subject": "fix: complete Tailwind brand palette, register AgentState in Tauri",
-      "authoredAt": "2026-06-11T06:45:25+00:00",
+      "sha": "5515d7b",
+      "subject": "feat: complete Tauri client scaffold with Vite entry points",
+      "authoredAt": "2026-06-11T06:49:08+00:00",
       "ageDays": 0.0
     },
-    "dirty": true,
+    "dirty": false,
     "ahead": 0,
     "behind": 0,
     "ci": "pending"
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:45:25+00:00",
+      "lastCommitAt": "2026-06-11T06:49:08+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 15,
-    "commitsLast30d": 17,
+    "commitsLast7d": 16,
+    "commitsLast30d": 18,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,30 +223,40 @@
       0,
       0,
       2,
-      13
+      14
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 17,
+    "activityTotal90d": 18,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 17
+        "commits": 18
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:48:28.069948+00:00",
+  "generatedAt": "2026-06-11T06:49:27.361942+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "d8facce",
+      "sha": "5515d7b",
       "parents": [
-        "ecd09d0"
+        "d8facce"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "feat: complete Tauri client scaffold with Vite entry points",
+      "at": "2026-06-11T06:49:08+00:00"
+    },
+    {
+      "sha": "d8facce",
+      "parents": [
+        "ecd09d0"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "fix: complete Tailwind brand palette, register AgentState in Tauri",
       "at": "2026-06-11T06:45:25+00:00"
