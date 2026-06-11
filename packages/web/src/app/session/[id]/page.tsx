@@ -32,6 +32,13 @@ export default function SessionPage({ params }: { params: { id: string } }) {
   const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null)
   const [warning, setWarning] = useState(false)
   const [ended, setEnded] = useState(false)
+  const [paymentBanner, setPaymentBanner] = useState(paymentStatus === 'success')
+
+  useEffect(() => {
+    if (!paymentBanner) return
+    const t = setTimeout(() => setPaymentBanner(false), 4000)
+    return () => clearTimeout(t)
+  }, [paymentBanner])
 
   // Redirect immediately if payment was cancelled
   useEffect(() => {
@@ -122,6 +129,11 @@ export default function SessionPage({ params }: { params: { id: string } }) {
     }
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white">
+        {paymentBanner && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg text-sm font-medium animate-fade-in">
+            Payment confirmed — starting your session
+          </div>
+        )}
         <div className="text-center">
           <div className="animate-spin w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-gray-300 text-lg">
