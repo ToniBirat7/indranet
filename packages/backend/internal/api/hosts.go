@@ -57,6 +57,17 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 		filters += " AND price_per_hour_cents <= $" + strconv.Itoa(argIdx)
 		argIdx++
 	}
+	// Count args are separate from LIMIT/OFFSET args
+	countArgs := args[:len(args)] // same filter args, without limit/offset
+
+	var totalCount int
+	if err := h.deps.Pool.QueryRow(r.Context(),
+		`SELECT COUNT(*) FROM hosts WHERE `+filters, countArgs...,
+	).Scan(&totalCount); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	args = append(args, limit, offset)
 
 	query := `
@@ -90,18 +101,18 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hosts = append(hosts, map[string]interface{}{
-			"host_id":              host.ID,
-			"display_name":         host.DisplayName,
-			"gpu_model":            host.GPUModel,
-			"vram_gb":              host.VRAMgb,
-			"cpu_model":            host.CPUModel,
-			"ram_gb":               host.RAMgb,
-			"os":                   host.OS,
-			"price_per_hour_cents": host.PricePerHourCents,
+			"host_id":                host.ID,
+			"display_name":           host.DisplayName,
+			"gpu_model":              host.GPUModel,
+			"vram_gb":                host.VRAMgb,
+			"cpu_model":              host.CPUModel,
+			"ram_gb":                 host.RAMgb,
+			"os":                     host.OS,
+			"price_per_hour_cents":   host.PricePerHourCents,
 			"price_per_minute_cents": host.PricePerMinuteCents(),
-			"tags":                 host.Tags,
-			"rating":               host.Rating(),
-			"total_sessions":       host.TotalSessions,
+			"tags":                   host.Tags,
+			"rating":                 host.Rating(),
+			"total_sessions":         host.TotalSessions,
 		})
 	}
 	if rows.Err() != nil {
@@ -112,8 +123,9 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"hosts": hosts,
-		"total": len(hosts),
+		"total": totalCount,
 		"page":  offset/limit + 1,
+		"limit": limit,
 	})
 }
 
