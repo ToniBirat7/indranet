@@ -39,7 +39,7 @@ jobs:
             -v ${{ github.workspace }}/packages/backend:/app \
             -w /app \
             golang:1.22-alpine \
-            sh -c "go build ./... && go vet ./..."
+            sh -c "go build ./... && go vet ./... ./tests/..."
 
   test-backend:
     name: Integration Tests (Go)
@@ -78,7 +78,7 @@ jobs:
             -e DATABASE_URL=postgres://indranet:testpassword@localhost:5432/indranet_test?sslmode=disable \
             -e REDIS_URL=redis://localhost:6379 \
             -e JWT_SECRET=test-secret-ci \
-            golang:1.22-alpine \
+            golang:1.22 \
             go test -v -race -timeout 120s ./...
 
   build-poc-02:
