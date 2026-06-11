@@ -40,6 +40,9 @@ func corsMiddleware(frontendURL string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
+			// Vary: Origin tells caching proxies the response differs by origin —
+			// required when ACAO is dynamic (not *).
+			w.Header().Set("Vary", "Origin")
 			for _, o := range allowed {
 				if strings.EqualFold(origin, o) {
 					w.Header().Set("Access-Control-Allow-Origin", origin)
