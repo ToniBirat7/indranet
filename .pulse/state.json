@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "842acf7",
-      "subject": "security: JWT auth gate on WebRTC signaling endpoint",
-      "authoredAt": "2026-06-11T06:41:58+00:00",
+      "sha": "ecd09d0",
+      "subject": "feat: CORS middleware, host session counter, sweep improvements",
+      "authoredAt": "2026-06-11T06:43:43+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:41:58+00:00",
+      "lastCommitAt": "2026-06-11T06:43:43+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 13,
-    "commitsLast30d": 15,
+    "commitsLast7d": 14,
+    "commitsLast30d": 16,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,30 +223,40 @@
       0,
       0,
       2,
-      11
+      12
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 15,
+    "activityTotal90d": 16,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 15
+        "commits": 16
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:43:28.882968+00:00",
+  "generatedAt": "2026-06-11T06:44:27.875820+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "842acf7",
+      "sha": "ecd09d0",
       "parents": [
-        "441b2f3"
+        "842acf7"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "feat: CORS middleware, host session counter, sweep improvements",
+      "at": "2026-06-11T06:43:43+00:00"
+    },
+    {
+      "sha": "842acf7",
+      "parents": [
+        "441b2f3"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "security: JWT auth gate on WebRTC signaling endpoint",
       "at": "2026-06-11T06:41:58+00:00"

@@ -23,3 +23,4 @@
 {"id": "commit:542c2ee", "type": "commit", "at": "2026-06-11T06:30:53+00:00", "summary": "feat: payment failure handler, Stripe PaymentIntent metadata, StreamViewer input capture"}
 {"id": "commit:441b2f3", "type": "commit", "at": "2026-06-11T06:38:37+00:00", "summary": "fix: wallet credit on payment, host lifecycle, session sweep"}
 {"id": "commit:842acf7", "type": "commit", "at": "2026-06-11T06:41:58+00:00", "summary": "security: JWT auth gate on WebRTC signaling endpoint"}
+{"id": "commit:ecd09d0", "type": "commit", "at": "2026-06-11T06:43:43+00:00", "summary": "feat: CORS middleware, host session counter, sweep improvements"}

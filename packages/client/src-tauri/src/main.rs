@@ -2,9 +2,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+use commands::agent::AgentState;
+use std::sync::Mutex;
 
 fn main() {
     tauri::Builder::default()
+        .manage(AgentState { process: Mutex::new(None) })
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             commands::agent::start_agent,
