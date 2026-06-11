@@ -23,7 +23,9 @@ export default function BookSessionForm({ hostId, pricePerHourCents }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const totalCents = Math.round((pricePerHourCents / 60) * duration)
+  // Match the Go backend's integer division: ratePerMinuteCents = pricePerHourCents / 60
+  const ratePerMinuteCents = Math.floor(pricePerHourCents / 60)
+  const totalCents = ratePerMinuteCents * duration
   const totalDisplay = (totalCents / 100).toFixed(2)
 
   async function handleBook(e: FormEvent) {

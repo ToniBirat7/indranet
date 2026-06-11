@@ -84,7 +84,7 @@ export default function DashboardPage() {
   const balanceDisplay = profile ? (profile.balance_cents / 100).toFixed(2) : '0.00'
   const hoursUsed = sessions
     .filter((s) => s.state === 'ENDED')
-    .reduce((acc, s) => acc + s.total_charged_cents / (s.rate_per_minute_cents * 60 || 1), 0)
+    .reduce((acc, s) => acc + s.total_charged_cents / (s.rate_per_minute_cents * 60 || 60), 0)
     .toFixed(1)
 
   return (
