@@ -409,7 +409,10 @@ func (h *Handlers) ConnectStripeAccount(w http.ResponseWriter, r *http.Request) 
 		if _, err := h.deps.Pool.Exec(r.Context(), `
 			UPDATE hosts SET stripe_account_id = $1, updated_at = NOW() WHERE id = $2
 		`, stripeAccountID, hostID); err != nil {
-			slog.Error("stripe: failed to store account_id", "host_id", hostID, "error", err)
+			slog.Error("stripe: created Connect account but failed to save ID — account orphaned",
+				"host_id", hostID, "stripe_account_id", stripeAccountID, "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
 		}
 	}
 
