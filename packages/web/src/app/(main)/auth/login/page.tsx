@@ -9,7 +9,8 @@ import { setAuth } from '@/lib/auth'
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnTo = searchParams.get('return') ?? '/'
+  const raw = searchParams.get('return') ?? '/'
+  const returnTo = raw.startsWith('/') ? raw : '/'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
