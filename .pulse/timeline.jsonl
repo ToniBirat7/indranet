@@ -4,3 +4,6 @@
 {"id": "commit:63e9677", "type": "commit", "at": "2026-05-14T09:47:30+00:00", "summary": "init"}
 {"id": "milestone:m:end-to-end-scaffold-complete:done", "type": "milestone", "at": "2026-06-10T11:00:58.412984+00:00", "summary": "Milestone: End-to-end scaffold complete"}
 {"id": "ci:default:7374540:failure", "type": "ci", "at": "2026-06-10T17:08:03.219333+00:00", "summary": "CI failure on main"}
+{"id": "session-end:2026-06-11T05:00:15.662545+00:00", "type": "session-end", "at": "2026-06-11T05:00:15.662545+00:00", "summary": "Claude session ended"}
+{"id": "commit:ef0be92", "type": "commit", "at": "2026-06-10T18:15:08+00:00", "summary": "chore(pulse): commit tracked .pulse/ project state"}
+{"id": "ci:default:ef0be92:failure", "type": "ci", "at": "2026-06-11T05:00:19.789308+00:00", "summary": "CI failure on main"}

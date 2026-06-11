@@ -40,6 +40,56 @@
       "createdAt": "2026-06-10T11:00:58.412087+00:00",
       "updatedAt": "2026-06-10T11:01:10.676249+00:00",
       "note": null
+    },
+    {
+      "id": "m:implement-poc-02-webrtc-signaling-server-in-go-p",
+      "title": "Implement PoC 02: WebRTC signaling server in Go (poc/02-webrtc-stream/server/main.go)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T05:22:20.581134+00:00",
+      "updatedAt": "2026-06-11T05:22:20.581147+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-poc-01-dxgi-capture-loop-nvenc-zero-co",
+      "title": "Implement PoC 01: DXGI capture loop + NVENC zero-copy encoding (poc/01-screen-capture-encode/src/main.cpp)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T05:22:20.581161+00:00",
+      "updatedAt": "2026-06-11T05:22:20.581163+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-poc-03-windows-sandbox-launch-gpu-pass",
+      "title": "Implement PoC 03: Windows Sandbox launch + GPU passthrough (poc/03-sandbox-test/launch-sandbox.ps1)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T05:22:20.581173+00:00",
+      "updatedAt": "2026-06-11T05:22:20.581174+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-poc-04-stripe-checkout-jwt-token-gate-",
+      "title": "Implement PoC 04: Stripe checkout + JWT token gate (poc/04-payment-gate/server/main.go)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T05:22:20.581182+00:00",
+      "updatedAt": "2026-06-11T05:22:20.581184+00:00",
+      "note": null
+    },
+    {
+      "id": "m:fix-ci-github-actions-workflow-failing-on-main-b",
+      "title": "Fix CI: GitHub Actions workflow failing on main branch",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T05:22:20.581190+00:00",
+      "updatedAt": "2026-06-11T05:22:20.581191+00:00",
+      "note": null
     }
   ]
 }

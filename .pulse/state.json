@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "indranet",
   "name": "IndraNet",
-  "description": "The compute network that never sleeps. Indra's Net for idle GPUs.",
+  "description": "IndraNet — peer-to-peer interactive compute marketplace for renting idle gaming PCs as live GUI sessions.",
   "status": "active",
   "statusReason": null,
-  "currentFeature": "complete scaffold — agent C++, client Tauri v2, shared types, scripts",
+  "currentFeature": "project scaffold complete — beginning Phase 0 PoC work",
   "currentPhase": "implementation",
   "milestones": [
     {
@@ -33,21 +33,21 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "7374540",
-      "subject": "chore(pulse): track .pulse/ project state",
-      "authoredAt": "2026-06-10T09:31:40+00:00",
-      "ageDays": 0.3
+      "sha": "ef0be92",
+      "subject": "chore(pulse): commit tracked .pulse/ project state",
+      "authoredAt": "2026-06-10T18:15:08+00:00",
+      "ageDays": 0.5
     },
     "dirty": true,
-    "ahead": 1,
+    "ahead": 2,
     "behind": 0,
     "ci": "failure"
   },
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-10T09:31:40+00:00",
-      "ageDays": 0.3,
+      "lastCommitAt": "2026-06-10T18:15:08+00:00",
+      "ageDays": 0.5,
       "isCurrent": true,
       "merged": false,
       "linkedPrNumber": null
@@ -80,7 +80,7 @@
       "research",
       "scripts"
     ],
-    "summary": "Idle-GPU compute network: C++ provider agent, Tauri v2 desktop client, shared type contracts, helper scripts.",
+    "summary": "P2P interactive compute marketplace: C++ host agent (DXGI+NVENC+WebRTC) → Go signaling backend → Next.js marketplace + Tauri desktop client, sandboxed via Windows Sandbox, gated by Stripe payments.",
     "overviewDoc": "overview.md"
   },
   "human": {
@@ -96,14 +96,14 @@
     "pinned": false
   },
   "metrics": {
-    "openTasks": 2,
+    "openTasks": 7,
     "doingTasks": 1,
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 1,
-    "commitsLast30d": 3,
-    "progress": 41,
+    "commitsLast7d": 2,
+    "commitsLast30d": 4,
+    "progress": 31,
     "activityDaily": [
       0,
       0,
@@ -166,7 +166,6 @@
       0,
       0,
       0,
-      0,
       1,
       1,
       0,
@@ -194,17 +193,18 @@
       0,
       0,
       0,
-      1
+      2,
+      0
     ],
-    "activityFrom": "2026-03-13",
-    "activityTotal90d": 3,
+    "activityFrom": "2026-03-14",
+    "activityTotal90d": 4,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 3
+        "commits": 4
       }
     ]
   },
-  "generatedAt": "2026-06-10T17:08:03.219461+00:00",
-  "generatedBy": "pulse-autosync@0.1.0"
+  "generatedAt": "2026-06-11T05:22:20.581733+00:00",
+  "generatedBy": "pulse-skill@0.1.0"
 }
