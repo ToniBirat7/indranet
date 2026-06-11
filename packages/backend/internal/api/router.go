@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	stripe "github.com/stripe/stripe-go/v76"
 )
 
 // RouterDeps holds all dependencies injected into HTTP handlers.
@@ -84,6 +85,10 @@ func maxBodyMiddleware(next http.Handler) http.Handler {
 
 // NewRouter creates and configures the HTTP router with all API routes.
 func NewRouter(deps RouterDeps) http.Handler {
+	if deps.Config.StripeSecretKey != "" {
+		stripe.Key = deps.Config.StripeSecretKey
+	}
+
 	r := chi.NewRouter()
 
 	// Global middleware

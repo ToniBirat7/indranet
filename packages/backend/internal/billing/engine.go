@@ -38,6 +38,9 @@ type HubNotifier interface {
 
 // NewEngine creates a new billing engine.
 func NewEngine(pool *pgxpool.Pool, rdb *redis.Client, hub HubNotifier, tickEvery time.Duration, warningMinutes int, stripeKey string, platformFeePercent int) *Engine {
+	if stripeKey != "" {
+		stripe.Key = stripeKey
+	}
 	return &Engine{
 		pool:               pool,
 		rdb:                rdb,
@@ -269,11 +272,16 @@ func (e *Engine) sweep() {
 		var ended []endedSession
 		for rows.Next() {
 			var s endedSession
-			if err := rows.Scan(&s.sessionID, &s.hostID, &s.totalChargedCents, &s.stripeAccountID, &s.payoutsEnabled); err == nil {
-				ended = append(ended, s)
+			if err := rows.Scan(&s.sessionID, &s.hostID, &s.totalChargedCents, &s.stripeAccountID, &s.payoutsEnabled); err != nil {
+				slog.Error("billing: sweep scan failed, host payout skipped", "error", err)
+				continue
 			}
+			ended = append(ended, s)
 		}
 		rows.Close()
+		if err := rows.Err(); err != nil {
+			slog.Error("billing: sweep rows error", "error", err)
+		}
 		if len(ended) > 0 {
 			slog.Info("billing: swept ENDING→ENDED", "count", len(ended))
 			for _, s := range ended {
@@ -333,7 +341,6 @@ func (e *Engine) transferHostPayout(s endedSession) {
 	hostPercent := int64(100 - e.platformFeePercent)
 	payoutCents := s.totalChargedCents * hostPercent / 100
 
-	stripe.Key = e.stripeKey
 	params := &stripe.TransferParams{
 		Amount:        stripe.Int64(payoutCents),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),

@@ -388,8 +388,6 @@ func (h *Handlers) ConnectStripeAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	stripe.Key = h.deps.Config.StripeSecretKey
-
 	// Create a new Express account if the host doesn't have one yet
 	if stripeAccountID == "" {
 		acct, err := stripeaccount.New(&stripe.AccountParams{

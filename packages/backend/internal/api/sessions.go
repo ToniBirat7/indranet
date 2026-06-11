@@ -154,8 +154,6 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) createStripeCheckout(sessionID string, durationMinutes int, ratePerMinuteCents int64) (string, error) {
-	stripe.Key = h.deps.Config.StripeSecretKey
-
 	totalCents := ratePerMinuteCents * int64(durationMinutes)
 	productName := fmt.Sprintf("IndraNet Session — %d minutes", durationMinutes)
 

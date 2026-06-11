@@ -240,7 +240,6 @@ func (h *Handlers) TopUpWallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stripe.Key = h.deps.Config.StripeSecretKey
 	params := &stripe.CheckoutSessionParams{
 		Mode: stripe.String(string(stripe.CheckoutSessionModePayment)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
