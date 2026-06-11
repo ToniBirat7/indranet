@@ -90,6 +90,76 @@
       "createdAt": "2026-06-11T05:22:20.581190+00:00",
       "updatedAt": "2026-06-11T05:22:20.581191+00:00",
       "note": null
+    },
+    {
+      "id": "m:wire-billingtimer-to-real-websocket-session-even",
+      "title": "Wire BillingTimer to real WebSocket session events (session_warning)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867781+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867790+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-dashboard-page-tsx-with-real-wallet-ba",
+      "title": "Implement dashboard/page.tsx with real wallet balance from API",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867799+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867801+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-dashboard-host-page-tsx-for-host-regis",
+      "title": "Implement dashboard/host/page.tsx for host registration + status",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867807+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867809+00:00",
+      "note": null
+    },
+    {
+      "id": "m:add-next-public-ws-url-env-to-docker-compose-yml",
+      "title": "Add NEXT_PUBLIC_WS_URL env to docker-compose.yml for session viewer",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867813+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867815+00:00",
+      "note": null
+    },
+    {
+      "id": "m:write-poc-02-readme-with-curl-wscat-quickstart-i",
+      "title": "Write poc/02 README with curl/wscat quickstart instructions",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867819+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867820+00:00",
+      "note": null
+    },
+    {
+      "id": "m:poc-01-dxgi-capture-stub-windows-only-skip-on-li",
+      "title": "PoC 01: DXGI capture stub (Windows-only, skip on Linux)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867828+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867829+00:00",
+      "note": null
+    },
+    {
+      "id": "m:poc-03-windows-sandbox-launch-windows-only-skip-",
+      "title": "PoC 03: Windows Sandbox launch (Windows-only, skip on Linux)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T06:18:28.867835+00:00",
+      "updatedAt": "2026-06-11T06:18:28.867836+00:00",
+      "note": null
     }
   ]
 }

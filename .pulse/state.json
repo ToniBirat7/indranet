@@ -5,7 +5,7 @@
   "description": "IndraNet — peer-to-peer interactive compute marketplace for renting idle gaming PCs as live GUI sessions.",
   "status": "active",
   "statusReason": null,
-  "currentFeature": "project scaffold complete — beginning Phase 0 PoC work",
+  "currentFeature": "backend-complete + web-ui-auth-flow",
   "currentPhase": "implementation",
   "milestones": [
     {
@@ -21,6 +21,35 @@
       "due": null,
       "status": "planned",
       "source": "machine"
+    },
+    {
+      "id": "tag:v0.0.1",
+      "title": "v0.0.1 — release v0.0.1 — fix: web Docker build — pnpm-workspace.yaml, next.config.mjs, public dir",
+      "due": null,
+      "at": "2026-06-11T05:54:27+00:00",
+      "status": "done",
+      "source": "machine"
+    },
+    {
+      "id": "m:backend-billing-stripe-auth-complete",
+      "title": "Backend billing + Stripe + auth complete",
+      "due": null,
+      "status": "done",
+      "source": "machine"
+    },
+    {
+      "id": "m:marketplace-ui-with-auth-host-listing-booking-fl",
+      "title": "Marketplace UI with auth, host listing, booking flow",
+      "due": null,
+      "status": "done",
+      "source": "machine"
+    },
+    {
+      "id": "m:end-to-end-session-register-browse-book-stream",
+      "title": "End-to-end session: register → browse → book → stream",
+      "due": null,
+      "status": "planned",
+      "source": "machine"
     }
   ],
   "links": [],
@@ -33,21 +62,21 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "ef0be92",
-      "subject": "chore(pulse): commit tracked .pulse/ project state",
-      "authoredAt": "2026-06-10T18:15:08+00:00",
-      "ageDays": 0.5
+      "sha": "8129ef6",
+      "subject": "feat(web): implement auth pages, real HostGrid, host detail + booking",
+      "authoredAt": "2026-06-11T06:17:44+00:00",
+      "ageDays": 0.0
     },
     "dirty": true,
-    "ahead": 2,
+    "ahead": 0,
     "behind": 0,
-    "ci": "failure"
+    "ci": "pending"
   },
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-10T18:15:08+00:00",
-      "ageDays": 0.5,
+      "lastCommitAt": "2026-06-11T06:17:44+00:00",
+      "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
       "linkedPrNumber": null
@@ -61,7 +90,7 @@
       "node@20.0.0"
     ],
     "frameworks": [],
-    "packageManager": "npm",
+    "packageManager": "pnpm",
     "detectedFrom": [
       "package.json"
     ]
@@ -80,7 +109,7 @@
       "research",
       "scripts"
     ],
-    "summary": "P2P interactive compute marketplace: C++ host agent (DXGI+NVENC+WebRTC) → Go signaling backend → Next.js marketplace + Tauri desktop client, sandboxed via Windows Sandbox, gated by Stripe payments.",
+    "summary": "Go stateless backend (billing, Stripe, sessions) + Next.js 14 marketplace (auth, host listing, booking) all fully dockerized",
     "overviewDoc": "overview.md"
   },
   "human": {
@@ -96,14 +125,14 @@
     "pinned": false
   },
   "metrics": {
-    "openTasks": 7,
+    "openTasks": 14,
     "doingTasks": 1,
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 2,
-    "commitsLast30d": 4,
-    "progress": 31,
+    "commitsLast7d": 8,
+    "commitsLast30d": 10,
+    "progress": 27,
     "activityDaily": [
       0,
       0,
@@ -194,17 +223,17 @@
       0,
       0,
       2,
-      0
+      6
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 4,
+    "activityTotal90d": 10,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 4
+        "commits": 10
       }
     ]
   },
-  "generatedAt": "2026-06-11T05:22:20.581733+00:00",
-  "generatedBy": "pulse-skill@0.1.0"
+  "generatedAt": "2026-06-11T06:18:30.258015+00:00",
+  "generatedBy": "pulse-autosync@0.1.0"
 }

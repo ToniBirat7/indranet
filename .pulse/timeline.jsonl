@@ -7,3 +7,14 @@
 {"id": "session-end:2026-06-11T05:00:15.662545+00:00", "type": "session-end", "at": "2026-06-11T05:00:15.662545+00:00", "summary": "Claude session ended"}
 {"id": "commit:ef0be92", "type": "commit", "at": "2026-06-10T18:15:08+00:00", "summary": "chore(pulse): commit tracked .pulse/ project state"}
 {"id": "ci:default:ef0be92:failure", "type": "ci", "at": "2026-06-11T05:00:19.789308+00:00", "summary": "CI failure on main"}
+{"id": "commit:0b37d8d", "type": "commit", "at": "2026-06-11T05:39:53+00:00", "summary": "fix: web Docker build — pnpm-workspace.yaml, next.config.mjs, public dir"}
+{"id": "commit:d675eec", "type": "commit", "at": "2026-06-11T05:35:22+00:00", "summary": "feat: full dockerization — lockfiles, Dockerfiles, CI, dev workflow"}
+{"id": "commit:40a9773", "type": "commit", "at": "2026-06-11T05:23:46+00:00", "summary": "ci: remove CI/CD workflows"}
+{"id": "commit:99af320", "type": "commit", "at": "2026-06-11T05:55:50+00:00", "summary": "feat(backend): implement auth, hosts, sessions, signaling, migrations"}
+{"id": "milestone:tag:v0.0.1:done", "type": "milestone", "at": "2026-06-11T05:54:27+00:00", "summary": "Milestone: v0.0.1 — release v0.0.1 — fix: web Docker build — pnpm-workspace.yaml, next.config.mjs, public dir"}
+{"id": "ci:default:99af320:pending", "type": "ci", "at": "2026-06-11T05:56:32.485981+00:00", "summary": "CI pending on main"}
+{"id": "commit:12f9af3", "type": "commit", "at": "2026-06-11T06:13:18+00:00", "summary": "feat(backend): wire billing engine + Stripe checkout + integration tests"}
+{"id": "commit:8129ef6", "type": "commit", "at": "2026-06-11T06:17:44+00:00", "summary": "feat(web): implement auth pages, real HostGrid, host detail + booking"}
+{"id": "milestone:m:backend-billing-stripe-auth-complete:done", "type": "milestone", "at": "2026-06-11T06:18:28.868183+00:00", "summary": "Milestone: Backend billing + Stripe + auth complete"}
+{"id": "milestone:m:marketplace-ui-with-auth-host-listing-booking-fl:done", "type": "milestone", "at": "2026-06-11T06:18:28.868185+00:00", "summary": "Milestone: Marketplace UI with auth, host listing, booking flow"}
+{"id": "ci:default:8129ef6:pending", "type": "ci", "at": "2026-06-11T06:18:28.868188+00:00", "summary": "CI pending on main"}
