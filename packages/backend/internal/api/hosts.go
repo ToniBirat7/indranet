@@ -187,9 +187,27 @@ func (h *Handlers) RegisterHost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "display_name and gpu_model are required", http.StatusBadRequest)
 		return
 	}
-	if req.PricePerHourCents <= 0 {
-		http.Error(w, "price_per_hour_cents must be positive", http.StatusBadRequest)
+	if len(req.DisplayName) > 80 || len(req.GPUModel) > 80 || len(req.CPUModel) > 80 || len(req.OS) > 80 {
+		http.Error(w, "string fields must be ≤80 characters", http.StatusBadRequest)
 		return
+	}
+	if req.PricePerHourCents <= 0 || req.PricePerHourCents > 100_000 { // max $1000/hr
+		http.Error(w, "price_per_hour_cents must be between 1 and 100000", http.StatusBadRequest)
+		return
+	}
+	if req.VRAMgb < 0 || req.VRAMgb > 1024 || req.RAMgb < 0 || req.RAMgb > 4096 {
+		http.Error(w, "vram_gb and ram_gb out of range", http.StatusBadRequest)
+		return
+	}
+	if len(req.Tags) > 20 {
+		http.Error(w, "too many tags (max 20)", http.StatusBadRequest)
+		return
+	}
+	for _, tag := range req.Tags {
+		if len(tag) > 40 {
+			http.Error(w, "each tag must be ≤40 characters", http.StatusBadRequest)
+			return
+		}
 	}
 	if req.Tags == nil {
 		req.Tags = []string{}
