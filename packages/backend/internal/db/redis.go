@@ -20,8 +20,9 @@ func ConnectRedis(ctx context.Context, redisURL string) (*redis.Client, error) {
 	const maxRetries = 10
 	const retryDelay = 2 * time.Second
 
+	var lastErr error
 	for i := 0; i < maxRetries; i++ {
-		if err := rdb.Ping(ctx).Err(); err == nil {
+		if lastErr = rdb.Ping(ctx).Err(); lastErr == nil {
 			return rdb, nil
 		}
 		if i < maxRetries-1 {
@@ -30,5 +31,5 @@ func ConnectRedis(ctx context.Context, redisURL string) (*redis.Client, error) {
 	}
 
 	rdb.Close()
-	return nil, fmt.Errorf("could not connect to redis after %d attempts: %w", maxRetries, err)
+	return nil, fmt.Errorf("could not connect to redis after %d attempts: %w", maxRetries, lastErr)
 }
