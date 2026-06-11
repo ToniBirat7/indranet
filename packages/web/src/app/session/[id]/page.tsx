@@ -34,6 +34,8 @@ export default function SessionPage({ params }: { params: { id: string } }) {
   const [ended, setEnded] = useState(false)
   const [endReason, setEndReason] = useState<string | null>(null)
   const [paymentBanner, setPaymentBanner] = useState(paymentStatus === 'success')
+  const [rating, setRating] = useState(0)
+  const [ratingSubmitted, setRatingSubmitted] = useState(false)
 
   useEffect(() => {
     if (!paymentBanner) return
@@ -115,14 +117,46 @@ export default function SessionPage({ params }: { params: { id: string } }) {
   }
 
   if (ended) {
+    const canRate = !endReason && !ratingSubmitted // only prompt rating on clean end
     return (
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white">
-        <div className="text-center">
+        <div className="text-center max-w-sm">
           <h2 className="text-2xl font-bold mb-2">Session ended</h2>
           <p className="text-gray-400 mb-6">{endReason ?? 'Your session has finished.'}</p>
+          {canRate && (
+            <div className="mb-6">
+              <p className="text-gray-300 text-sm mb-3">How was the experience?</p>
+              <div className="flex justify-center gap-2 mb-3">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setRating(s)}
+                    className={`text-2xl transition-colors ${s <= rating ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-500'}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              {rating > 0 && (
+                <button
+                  onClick={async () => {
+                    const token = getToken()
+                    if (token) {
+                      await api.sessions.rate(params.id, rating, token).catch(() => {})
+                      setRatingSubmitted(true)
+                    }
+                  }}
+                  className="bg-brand-600 hover:bg-brand-700 px-5 py-1.5 rounded-lg text-sm mb-2 transition-colors"
+                >
+                  Submit rating
+                </button>
+              )}
+            </div>
+          )}
+          {ratingSubmitted && <p className="text-green-400 text-sm mb-4">Thanks for the feedback!</p>}
           <button
             onClick={() => router.push('/dashboard')}
-            className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg"
+            className="bg-gray-800 hover:bg-gray-700 px-6 py-2 rounded-lg text-sm transition-colors"
           >
             View dashboard
           </button>

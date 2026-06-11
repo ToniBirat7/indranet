@@ -96,6 +96,12 @@ export const api = {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       }),
+    rate: (id: string, stars: number, token: string) =>
+      apiFetch<{ stars: number }>(`/sessions/${id}/rate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ stars }),
+      }),
   },
   users: {
     me: (token: string) =>

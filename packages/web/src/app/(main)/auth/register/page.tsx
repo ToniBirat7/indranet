@@ -82,13 +82,14 @@ export default function RegisterPage() {
           <div>
             <label className="block text-gray-300 text-sm mb-1" htmlFor="password">
               Password
-              <span className="text-gray-500 text-xs ml-1">(8+ characters)</span>
+              <span className="text-gray-500 text-xs ml-1">(8–72 characters)</span>
             </label>
             <input
               id="password"
               type="password"
               required
               minLength={8}
+              maxLength={72}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 focus:border-brand-500 text-white rounded-lg px-4 py-2.5 outline-none transition-colors"

@@ -435,3 +435,76 @@ func (h *Handlers) GetPendingSessions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"sessions": pending})
 }
+
+// RateSession lets a user submit a 1–5 star rating for a completed session.
+// Only the session owner can rate, and only once per session.
+// POST /v1/sessions/{id}/rate
+func (h *Handlers) RateSession(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(ctxKeyUserID).(string)
+	sessionID := chi.URLParam(r, "id")
+
+	var req struct {
+		Stars int `json:"stars"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Stars < 1 || req.Stars > 5 {
+		http.Error(w, "stars must be between 1 and 5", http.StatusBadRequest)
+		return
+	}
+
+	// Verify session is ENDED and owned by this user; get host_id and check not already rated.
+	var hostID string
+	var rated bool
+	err := h.deps.Pool.QueryRow(r.Context(), `
+		SELECT host_id, rating IS NOT NULL
+		FROM sessions
+		WHERE id = $1 AND user_id = $2 AND state = 'ENDED'
+	`, sessionID, userID).Scan(&hostID, &rated)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "session not found or not ended", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if rated {
+		http.Error(w, "session already rated", http.StatusConflict)
+		return
+	}
+
+	// Atomically record rating on session and update host aggregate.
+	tx, err := h.deps.Pool.Begin(r.Context())
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(r.Context()) //nolint:errcheck
+
+	if _, err := tx.Exec(r.Context(),
+		`UPDATE sessions SET rating = $1, updated_at = NOW() WHERE id = $2`,
+		req.Stars, sessionID,
+	); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		UPDATE hosts
+		SET rating_sum = rating_sum + $1, rating_count = rating_count + 1, updated_at = NOW()
+		WHERE id = $2
+	`, req.Stars, hostID); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int{"stars": req.Stars})
+}

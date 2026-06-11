@@ -103,6 +103,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 			r.With(h.sessionCreateRateLimitMiddleware).Post("/sessions", h.CreateSession)
 			r.Get("/sessions/{id}", h.GetSession)
 			r.Delete("/sessions/{id}", h.EndSession)
+			r.Post("/sessions/{id}/rate", h.RateSession)
 		})
 
 		// Agent-authenticated routes (host agent JWT)
