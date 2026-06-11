@@ -39,11 +39,6 @@ export interface SessionSummary {
 
 export const api = {
   hosts: {
-    list: (params?: Record<string, string>) => {
-      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
-      return apiFetch<{ hosts: unknown[]; total: number }>(`/hosts${qs}`)
-    },
-    get: (id: string) => apiFetch<unknown>(`/hosts/${id}`),
     register: (
       body: {
         display_name: string
