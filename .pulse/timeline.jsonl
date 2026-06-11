@@ -21,3 +21,4 @@
 {"id": "commit:975425f", "type": "commit", "at": "2026-06-11T06:18:33+00:00", "summary": "chore(pulse): sync project state — billing+web MVPs complete"}
 {"id": "commit:d7213bd", "type": "commit", "at": "2026-06-11T06:25:48+00:00", "summary": "feat: session viewer + dashboards + user/session list endpoints"}
 {"id": "commit:542c2ee", "type": "commit", "at": "2026-06-11T06:30:53+00:00", "summary": "feat: payment failure handler, Stripe PaymentIntent metadata, StreamViewer input capture"}
+{"id": "commit:441b2f3", "type": "commit", "at": "2026-06-11T06:38:37+00:00", "summary": "fix: wallet credit on payment, host lifecycle, session sweep"}

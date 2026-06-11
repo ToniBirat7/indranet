@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "542c2ee",
-      "subject": "feat: payment failure handler, Stripe PaymentIntent metadata, StreamViewer input capture",
-      "authoredAt": "2026-06-11T06:30:53+00:00",
+      "sha": "441b2f3",
+      "subject": "fix: wallet credit on payment, host lifecycle, session sweep",
+      "authoredAt": "2026-06-11T06:38:37+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:30:53+00:00",
+      "lastCommitAt": "2026-06-11T06:38:37+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 11,
-    "commitsLast30d": 13,
+    "commitsLast7d": 12,
+    "commitsLast30d": 14,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,17 +223,163 @@
       0,
       0,
       2,
-      9
+      10
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 13,
+    "activityTotal90d": 14,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 13
+        "commits": 14
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:38:07.051809+00:00",
-  "generatedBy": "pulse-autosync@0.1.0"
+  "generatedAt": "2026-06-11T06:41:06.650077+00:00",
+  "generatedBy": "pulse-autosync@0.1.0",
+  "commitGraph": [
+    {
+      "sha": "441b2f3",
+      "parents": [
+        "542c2ee"
+      ],
+      "refs": [
+        "main",
+        "origin/main",
+        "origin/HEAD"
+      ],
+      "author": "ToniBirat7",
+      "subject": "fix: wallet credit on payment, host lifecycle, session sweep",
+      "at": "2026-06-11T06:38:37+00:00"
+    },
+    {
+      "sha": "542c2ee",
+      "parents": [
+        "d7213bd"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat: payment failure handler, Stripe PaymentIntent metadata, StreamViewer input capture",
+      "at": "2026-06-11T06:30:53+00:00"
+    },
+    {
+      "sha": "d7213bd",
+      "parents": [
+        "975425f"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat: session viewer + dashboards + user/session list endpoints",
+      "at": "2026-06-11T06:25:48+00:00"
+    },
+    {
+      "sha": "975425f",
+      "parents": [
+        "8129ef6"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "chore(pulse): sync project state — billing+web MVPs complete",
+      "at": "2026-06-11T06:18:33+00:00"
+    },
+    {
+      "sha": "8129ef6",
+      "parents": [
+        "12f9af3"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(web): implement auth pages, real HostGrid, host detail + booking",
+      "at": "2026-06-11T06:17:44+00:00"
+    },
+    {
+      "sha": "12f9af3",
+      "parents": [
+        "99af320"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(backend): wire billing engine + Stripe checkout + integration tests",
+      "at": "2026-06-11T06:13:18+00:00"
+    },
+    {
+      "sha": "99af320",
+      "parents": [
+        "0b37d8d"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(backend): implement auth, hosts, sessions, signaling, migrations",
+      "at": "2026-06-11T05:55:50+00:00"
+    },
+    {
+      "sha": "0b37d8d",
+      "parents": [
+        "d675eec"
+      ],
+      "refs": [
+        "tag:v0.0.1"
+      ],
+      "author": "ToniBirat7",
+      "subject": "fix: web Docker build — pnpm-workspace.yaml, next.config.mjs, public dir",
+      "at": "2026-06-11T05:39:53+00:00"
+    },
+    {
+      "sha": "d675eec",
+      "parents": [
+        "40a9773"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat: full dockerization — lockfiles, Dockerfiles, CI, dev workflow",
+      "at": "2026-06-11T05:35:22+00:00"
+    },
+    {
+      "sha": "40a9773",
+      "parents": [
+        "ef0be92"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "ci: remove CI/CD workflows",
+      "at": "2026-06-11T05:23:46+00:00"
+    },
+    {
+      "sha": "ef0be92",
+      "parents": [
+        "7374540"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "chore(pulse): commit tracked .pulse/ project state",
+      "at": "2026-06-10T18:15:08+00:00"
+    },
+    {
+      "sha": "7374540",
+      "parents": [
+        "70530e0"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "chore(pulse): track .pulse/ project state",
+      "at": "2026-06-10T09:31:40+00:00"
+    },
+    {
+      "sha": "70530e0",
+      "parents": [
+        "63e9677"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat: complete scaffold — agent C++, client Tauri v2, shared types, scripts",
+      "at": "2026-05-15T05:06:24+00:00"
+    },
+    {
+      "sha": "63e9677",
+      "parents": [],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "init",
+      "at": "2026-05-14T09:47:30+00:00"
+    }
+  ]
 }

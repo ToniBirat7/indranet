@@ -8,9 +8,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
 	"github.com/stripe/stripe-go/v76"
@@ -223,13 +225,59 @@ var wsUpgrader = websocket.Upgrader{
 }
 
 // Signal handles WebSocket connections for WebRTC signaling.
-// ?role=host|viewer — the hub relays messages between the two participants.
+// ?role=host|viewer&token=<jwt> — token is validated before upgrade.
+// Security invariant: every WebSocket connection must carry a valid JWT.
 func (h *Handlers) Signal(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	role := r.URL.Query().Get("role")
 	if role != "host" && role != "viewer" {
 		http.Error(w, "role must be 'host' or 'viewer'", http.StatusBadRequest)
 		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		// Also accept Bearer header for host agents that use HTTP conventions
+		token = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	}
+	if token == "" {
+		http.Error(w, "token required", http.StatusUnauthorized)
+		return
+	}
+
+	claims := &jwtClaims{}
+	if _, err := jwt.ParseWithClaims(token, claims, h.jwtKeyFunc); err != nil {
+		http.Error(w, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	// Role-specific authorization: viewer must own the session, host agent must own the host.
+	if role == "viewer" {
+		if claims.Role == "agent" {
+			http.Error(w, "agents cannot connect as viewer", http.StatusForbidden)
+			return
+		}
+		var ownerID string
+		err := h.deps.Pool.QueryRow(r.Context(),
+			`SELECT user_id FROM sessions WHERE id = $1`, sessionID,
+		).Scan(&ownerID)
+		if err != nil || ownerID != claims.UserID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	} else { // host
+		if claims.Role != "agent" {
+			http.Error(w, "only agent tokens may connect as host", http.StatusForbidden)
+			return
+		}
+		var hostID string
+		err := h.deps.Pool.QueryRow(r.Context(),
+			`SELECT host_id FROM sessions WHERE id = $1`, sessionID,
+		).Scan(&hostID)
+		if err != nil || hostID != claims.UserID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
 	}
 
 	conn, err := wsUpgrader.Upgrade(w, r, nil)

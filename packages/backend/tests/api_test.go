@@ -182,4 +182,39 @@ func TestCreateSessionDevAutoAuthorize(t *testing.T) {
 	if sessResp["session_id"] == "" {
 		t.Error("expected session_id in response")
 	}
+
+	// Verify user's balance was credited (dev mode should fund wallet for the session duration)
+	var balanceCents int64
+	err := d.pool.QueryRow(context.Background(),
+		`SELECT balance_cents FROM users WHERE id = $1`, userID,
+	).Scan(&balanceCents)
+	if err != nil {
+		t.Fatalf("fetch balance: %v", err)
+	}
+	// 600 cents/hr = 10 cents/min; 15 min = 150 cents credited, then 0 deducted (not ACTIVE yet)
+	expectedCredit := int64(10 * 15) // 150 cents
+	if balanceCents < expectedCredit {
+		t.Errorf("wallet not credited: expected ≥%d cents, got %d", expectedCredit, balanceCents)
+	}
+}
+
+// TestSignalRejectsUnauthenticated verifies /v1/signal/{id} returns 401 without a valid token.
+func TestSignalRejectsUnauthenticated(t *testing.T) {
+	d := newTestDeps(t)
+
+	// No token — must get 401 (HTTP response before WS upgrade)
+	req := httptest.NewRequest(http.MethodGet, "/v1/signal/ses_fake?role=viewer", nil)
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 without token, got %d", w.Code)
+	}
+
+	// Invalid token — must get 401
+	req2 := httptest.NewRequest(http.MethodGet, "/v1/signal/ses_fake?role=viewer&token=badtoken", nil)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 with invalid token, got %d", w2.Code)
+	}
 }
