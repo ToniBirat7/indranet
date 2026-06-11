@@ -68,6 +68,17 @@ func securityHeadersMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// maxBodyMiddleware caps request bodies at 1 MB to prevent large-body DoS.
+// Stripe webhook bodies are typically <8KB; SDP offers are <4KB; all API
+// payloads are well under 1 MB.
+func maxBodyMiddleware(next http.Handler) http.Handler {
+	const maxBytes = 1 << 20 // 1 MB
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // NewRouter creates and configures the HTTP router with all API routes.
 func NewRouter(deps RouterDeps) http.Handler {
 	r := chi.NewRouter()
@@ -80,6 +91,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 	r.Use(middleware.Timeout(60 * 1000000000)) // 60s
 	r.Use(corsMiddleware(deps.Config.FrontendBaseURL))
 	r.Use(securityHeadersMiddleware)
+	r.Use(maxBodyMiddleware)
 
 	origins := allowedOrigins(deps.Config.FrontendBaseURL)
 	h := &Handlers{
