@@ -2,12 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getToken } from '@/lib/auth'
+import InputCapture from './InputCapture'
 
 type SessionEvent = {
-  type: 'session_warning'
-  minutes_remaining: number
-} | {
-  type: 'session_kill' | 'session_failed' | string
+  type: string
   reason?: string
   minutes_remaining?: number
 }
@@ -26,6 +24,7 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
   const wsRef = useRef<WebSocket | null>(null)
   const [state, setState] = useState<ConnectionState>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [inputChannel, setInputChannel] = useState<RTCDataChannel | null>(null)
 
   useEffect(() => {
     connect()
@@ -43,15 +42,8 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
     wsRef.current = ws
 
     ws.onopen = () => setupPeerConnection(ws)
-
-    ws.onerror = () => {
-      setError('Failed to connect to signaling server')
-      setState('error')
-    }
-
-    ws.onclose = () => {
-      setState((prev) => (prev === 'connected' ? 'error' : prev))
-    }
+    ws.onerror = () => { setError('Failed to connect to signaling server'); setState('error') }
+    ws.onclose = () => setState((prev) => (prev === 'connected' ? 'error' : prev))
   }
 
   function setupPeerConnection(ws: WebSocket) {
@@ -59,6 +51,11 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     })
     pcRef.current = pc
+
+    // Input data channel — ordered: false, maxRetransmits: 0 for minimal latency
+    const ch = pc.createDataChannel('input', { ordered: false, maxRetransmits: 0 })
+    ch.onopen = () => setInputChannel(ch)
+    ch.onclose = () => setInputChannel(null)
 
     pc.ontrack = (event) => {
       if (videoRef.current && event.streams[0]) {
@@ -68,25 +65,16 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
     }
 
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        ws.send(JSON.stringify({ type: 'ice_candidate', candidate: event.candidate }))
-      }
+      if (event.candidate) ws.send(JSON.stringify({ type: 'ice_candidate', candidate: event.candidate }))
     }
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed') {
-        setError('WebRTC connection failed')
-        setState('error')
-      }
+      if (pc.connectionState === 'failed') { setError('WebRTC connection failed'); setState('error') }
     }
 
-    ws.onmessage = async (event) => {
+    ws.onmessage = async (rawEvent) => {
       let msg: Record<string, unknown>
-      try {
-        msg = JSON.parse(event.data as string)
-      } catch {
-        return
-      }
+      try { msg = JSON.parse(rawEvent.data as string) } catch { return }
 
       switch (msg.type) {
         case 'offer': {
@@ -97,14 +85,12 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
           break
         }
         case 'ice_candidate':
-          if (msg.candidate) {
-            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate as RTCIceCandidateInit))
-          }
+          if (msg.candidate) await pc.addIceCandidate(new RTCIceCandidate(msg.candidate as RTCIceCandidateInit))
           break
         case 'session_kill':
         case 'session_failed':
         case 'session_warning':
-          onSessionEvent?.(msg as unknown as SessionEvent)
+          onSessionEvent?.(msg as SessionEvent)
           break
       }
     }
@@ -114,6 +100,7 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
     pcRef.current?.close()
     wsRef.current?.close()
     if (videoRef.current) videoRef.current.srcObject = null
+    setInputChannel(null)
   }
 
   if (state === 'error') {
@@ -121,9 +108,7 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
       <div className="flex items-center justify-center h-full bg-gray-950 text-white">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-4">{error ?? 'Connection error'}</p>
-          <button onClick={connect} className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg">
-            Retry
-          </button>
+          <button onClick={connect} className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg">Retry</button>
         </div>
       </div>
     )
@@ -141,11 +126,16 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
   }
 
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      className="w-full h-full object-contain bg-black cursor-none"
-    />
+    <>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className="w-full h-full object-contain bg-black cursor-none"
+        onClick={() => videoRef.current?.requestPointerLock()}
+        title="Click to capture mouse input"
+      />
+      <InputCapture dataChannel={inputChannel} />
+    </>
   )
 }

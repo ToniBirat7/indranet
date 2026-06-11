@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "8129ef6",
-      "subject": "feat(web): implement auth pages, real HostGrid, host detail + booking",
-      "authoredAt": "2026-06-11T06:17:44+00:00",
+      "sha": "d7213bd",
+      "subject": "feat: session viewer + dashboards + user/session list endpoints",
+      "authoredAt": "2026-06-11T06:25:48+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:17:44+00:00",
+      "lastCommitAt": "2026-06-11T06:25:48+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 8,
-    "commitsLast30d": 10,
+    "commitsLast7d": 10,
+    "commitsLast30d": 12,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,17 +223,17 @@
       0,
       0,
       2,
-      6
+      8
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 10,
+    "activityTotal90d": 12,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 10
+        "commits": 12
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:18:30.258015+00:00",
+  "generatedAt": "2026-06-11T06:30:30.163823+00:00",
   "generatedBy": "pulse-autosync@0.1.0"
 }

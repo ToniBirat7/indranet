@@ -130,8 +130,11 @@ func (h *Handlers) createStripeCheckout(sessionID string, durationMinutes int, r
 				Quantity: stripe.Int64(1),
 			},
 		},
-		Metadata: map[string]string{
-			"indranet_session_id": sessionID,
+		// Metadata on both the checkout session AND the payment intent so that
+		// payment_intent.payment_failed webhook also carries indranet_session_id.
+		Metadata: map[string]string{"indranet_session_id": sessionID},
+		PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
+			Metadata: map[string]string{"indranet_session_id": sessionID},
 		},
 		SuccessURL: stripe.String(h.deps.Config.FrontendBaseURL + "/sessions/" + sessionID + "?payment=success"),
 		CancelURL:  stripe.String(h.deps.Config.FrontendBaseURL + "/sessions/" + sessionID + "?payment=cancelled"),

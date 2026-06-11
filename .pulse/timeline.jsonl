@@ -18,3 +18,5 @@
 {"id": "milestone:m:backend-billing-stripe-auth-complete:done", "type": "milestone", "at": "2026-06-11T06:18:28.868183+00:00", "summary": "Milestone: Backend billing + Stripe + auth complete"}
 {"id": "milestone:m:marketplace-ui-with-auth-host-listing-booking-fl:done", "type": "milestone", "at": "2026-06-11T06:18:28.868185+00:00", "summary": "Milestone: Marketplace UI with auth, host listing, booking flow"}
 {"id": "ci:default:8129ef6:pending", "type": "ci", "at": "2026-06-11T06:18:28.868188+00:00", "summary": "CI pending on main"}
+{"id": "commit:975425f", "type": "commit", "at": "2026-06-11T06:18:33+00:00", "summary": "chore(pulse): sync project state — billing+web MVPs complete"}
+{"id": "commit:d7213bd", "type": "commit", "at": "2026-06-11T06:25:48+00:00", "summary": "feat: session viewer + dashboards + user/session list endpoints"}

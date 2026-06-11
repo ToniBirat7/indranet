@@ -52,10 +52,14 @@ func (h *Handlers) StripeWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "payment_intent.payment_failed":
-		// TODO: Mark session as FAILED, notify user
+		if err := h.handlePaymentFailed(r.Context(), event); err != nil {
+			slog.Error("stripe: payment_intent.payment_failed handler failed", "error", err)
+		}
 
 	case "account.updated":
-		// TODO: Update host's payouts_enabled status in DB
+		if err := h.handleAccountUpdated(r.Context(), event); err != nil {
+			slog.Error("stripe: account.updated handler failed", "error", err)
+		}
 
 	default:
 		slog.Debug("stripe webhook: unhandled event type", "type", event.Type)
@@ -107,6 +111,56 @@ func (h *Handlers) handleCheckoutComplete(ctx context.Context, event stripe.Even
 	// If agent doesn't confirm ACTIVE within 5 minutes, mark FAILED
 	go h.awaitAgentReady(internalSessionID, 5*time.Minute)
 
+	return nil
+}
+
+// handlePaymentFailed marks a session FAILED when Stripe payment fails or is declined.
+func (h *Handlers) handlePaymentFailed(ctx context.Context, event stripe.Event) error {
+	var pi stripe.PaymentIntent
+	if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
+		return fmt.Errorf("unmarshal payment intent: %w", err)
+	}
+
+	sessionID := pi.Metadata["indranet_session_id"]
+	if sessionID == "" {
+		slog.Debug("stripe: payment_failed with no indranet_session_id — ignoring")
+		return nil
+	}
+
+	tag, err := h.deps.Pool.Exec(ctx, `
+		UPDATE sessions SET state = 'FAILED', updated_at = NOW()
+		WHERE id = $1 AND state IN ('CREATED', 'AUTHORIZED')
+	`, sessionID)
+	if err != nil {
+		return fmt.Errorf("mark session failed: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		slog.Warn("stripe: payment failed, session marked FAILED", "session_id", sessionID)
+		h.deps.Hub.SendToSession(sessionID, map[string]string{
+			"type":   "session_failed",
+			"reason": "payment_failed",
+		})
+	}
+	return nil
+}
+
+// handleAccountUpdated syncs Stripe Connect account payout status to the host record.
+func (h *Handlers) handleAccountUpdated(ctx context.Context, event stripe.Event) error {
+	var account stripe.Account
+	if err := json.Unmarshal(event.Data.Raw, &account); err != nil {
+		return fmt.Errorf("unmarshal account: %w", err)
+	}
+
+	if _, err := h.deps.Pool.Exec(ctx, `
+		UPDATE hosts SET payouts_enabled = $1, updated_at = NOW()
+		WHERE stripe_account_id = $2
+	`, account.PayoutsEnabled, account.ID); err != nil {
+		return fmt.Errorf("update host payouts_enabled: %w", err)
+	}
+	slog.Info("stripe: host payout status updated",
+		"account_id", account.ID,
+		"payouts_enabled", account.PayoutsEnabled,
+	)
 	return nil
 }
 
