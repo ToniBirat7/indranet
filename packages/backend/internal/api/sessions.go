@@ -41,6 +41,10 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 	if req.DurationMinutes < 15 {
 		req.DurationMinutes = 15
 	}
+	if req.DurationMinutes > 480 {
+		http.Error(w, "duration_minutes cannot exceed 480 (8 hours)", http.StatusBadRequest)
+		return
+	}
 
 	var pricePerHourCents int64
 	var online bool

@@ -52,8 +52,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name must be ≤80 characters", http.StatusBadRequest)
 		return
 	}
-	if len(req.Password) < 8 {
-		http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
+	if len(req.Password) < 8 || len(req.Password) > 72 {
+		http.Error(w, "password must be 8–72 characters", http.StatusBadRequest)
 		return
 	}
 
