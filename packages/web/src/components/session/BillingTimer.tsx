@@ -6,10 +6,17 @@ interface Props {
   sessionId: string
   minutesRemaining?: number | null
   warning?: boolean
+  startedAt?: string | null
 }
 
-export default function BillingTimer({ sessionId: _sessionId, minutesRemaining, warning }: Props) {
-  const [elapsed, setElapsed] = useState(0)
+export default function BillingTimer({ sessionId: _sessionId, minutesRemaining, warning, startedAt }: Props) {
+  const [elapsed, setElapsed] = useState(() => {
+    if (startedAt) {
+      const ms = Date.now() - new Date(startedAt).getTime()
+      return Math.max(0, Math.floor(ms / 1000))
+    }
+    return 0
+  })
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed((s) => s + 1), 1000)

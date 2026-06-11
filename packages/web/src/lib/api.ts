@@ -83,6 +83,7 @@ export const api = {
         rate_per_minute_cents: number
         balance_remaining_minutes: number
         total_charged_cents: number
+        started_at: string | null
       }>(`/sessions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),

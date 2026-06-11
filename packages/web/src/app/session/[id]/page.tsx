@@ -12,6 +12,7 @@ interface SessionState {
   state: string
   rate_per_minute_cents: number
   balance_remaining_minutes: number
+  started_at: string | null
 }
 
 type BillingEvent = {
@@ -206,6 +207,7 @@ export default function SessionPage({ params }: { params: { id: string } }) {
           sessionId={params.id}
           minutesRemaining={minutesRemaining}
           warning={warning}
+          startedAt={session?.started_at ?? null}
         />
         <button
           onClick={async () => {
