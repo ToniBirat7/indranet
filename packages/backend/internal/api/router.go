@@ -84,11 +84,13 @@ func NewRouter(deps RouterDeps) http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(h.AuthMiddleware)
 
-			// User profile
+			// User profile and wallet
 			r.Get("/users/me", h.GetMe)
+			r.Post("/users/me/topup", h.TopUpWallet)
 
 			// Host management
 			r.Post("/hosts/register", h.RegisterHost)
+			r.Post("/hosts/me/stripe/connect", h.ConnectStripeAccount)
 
 			// Sessions
 			r.Get("/sessions", h.ListSessions)

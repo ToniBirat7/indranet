@@ -15,7 +15,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
-	"github.com/stripe/stripe-go/v76"
+	stripe "github.com/stripe/stripe-go/v76"
+	stripecs "github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/webhook"
 
 	"github.com/ToniBirat7/indranet/packages/backend/internal/signaling"
@@ -72,14 +73,24 @@ func (h *Handlers) StripeWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleCheckoutComplete processes a successful checkout and transitions the session to AUTHORIZED.
+// handleCheckoutComplete dispatches checkout.session.completed events by their type metadata.
 func (h *Handlers) handleCheckoutComplete(ctx context.Context, event stripe.Event) error {
-	var checkoutSession stripe.CheckoutSession
-	if err := json.Unmarshal(event.Data.Raw, &checkoutSession); err != nil {
+	var cs stripe.CheckoutSession
+	if err := json.Unmarshal(event.Data.Raw, &cs); err != nil {
 		return fmt.Errorf("unmarshal checkout session: %w", err)
 	}
 
-	internalSessionID := checkoutSession.Metadata["indranet_session_id"]
+	switch cs.Metadata["type"] {
+	case "wallet_topup":
+		return h.handleWalletTopup(ctx, cs)
+	default:
+		return h.handleSessionCheckoutComplete(ctx, cs)
+	}
+}
+
+// handleSessionCheckoutComplete authorizes a session and credits the wallet atomically.
+func (h *Handlers) handleSessionCheckoutComplete(ctx context.Context, cs stripe.CheckoutSession) error {
+	internalSessionID := cs.Metadata["indranet_session_id"]
 	if internalSessionID == "" {
 		slog.Warn("stripe: checkout completed with no indranet_session_id in metadata")
 		return nil
@@ -100,19 +111,18 @@ func (h *Handlers) handleCheckoutComplete(ctx context.Context, event stripe.Even
 		SET state = 'AUTHORIZED', stripe_checkout_id = $1, updated_at = NOW()
 		WHERE id = $2 AND state = 'CREATED'
 		RETURNING user_id, rate_per_minute_cents * pre_auth_minutes
-	`, checkoutSession.ID, internalSessionID).Scan(&userID, &totalCents)
+	`, cs.ID, internalSessionID).Scan(&userID, &totalCents)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			slog.Warn("stripe: session not in CREATED state, ignoring duplicate webhook",
 				"session_id", internalSessionID,
-				"stripe_session_id", checkoutSession.ID,
+				"stripe_session_id", cs.ID,
 			)
 			return nil
 		}
 		return fmt.Errorf("authorize session: %w", err)
 	}
 
-	// Credit the user's wallet so the billing engine has funds to deduct.
 	if _, err := tx.Exec(ctx, `
 		UPDATE users SET balance_cents = balance_cents + $1, updated_at = NOW()
 		WHERE id = $2
@@ -125,21 +135,112 @@ func (h *Handlers) handleCheckoutComplete(ctx context.Context, event stripe.Even
 	}
 
 	slog.Info("stripe: session authorized and wallet credited",
-		"stripe_session_id", checkoutSession.ID,
+		"stripe_session_id", cs.ID,
 		"indranet_session_id", internalSessionID,
 		"credited_cents", totalCents,
 	)
 
-	// Notify the host agent that it should prepare the sandbox.
 	h.deps.Hub.SendToSession(internalSessionID, map[string]string{
 		"type":       "session_authorized",
 		"session_id": internalSessionID,
 	})
-
-	// If agent doesn't confirm ACTIVE within 5 minutes, mark FAILED.
 	go h.awaitAgentReady(internalSessionID, 5*time.Minute)
-
 	return nil
+}
+
+// handleWalletTopup credits the user's wallet directly from a top-up checkout.
+func (h *Handlers) handleWalletTopup(ctx context.Context, cs stripe.CheckoutSession) error {
+	userID := cs.Metadata["user_id"]
+	if userID == "" {
+		slog.Warn("stripe: wallet_topup checkout has no user_id metadata")
+		return nil
+	}
+
+	amountCents := cs.AmountTotal
+	if _, err := h.deps.Pool.Exec(ctx, `
+		UPDATE users SET balance_cents = balance_cents + $1, updated_at = NOW()
+		WHERE id = $2
+	`, amountCents, userID); err != nil {
+		return fmt.Errorf("credit wallet topup: %w", err)
+	}
+
+	slog.Info("stripe: wallet top-up credited",
+		"user_id", userID,
+		"amount_cents", amountCents,
+	)
+	return nil
+}
+
+// TopUpWallet creates a Stripe Checkout session to add funds to the user's wallet.
+// POST /v1/users/me/topup — body: {"amount_cents": 1000}  (min $1.00)
+func (h *Handlers) TopUpWallet(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(ctxKeyUserID).(string)
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		AmountCents int64 `json:"amount_cents"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.AmountCents < 100 {
+		http.Error(w, "amount_cents must be at least 100 ($1.00)", http.StatusBadRequest)
+		return
+	}
+
+	if h.deps.Config.StripeSecretKey == "" {
+		// Dev mode: credit wallet directly without Stripe
+		if _, err := h.deps.Pool.Exec(r.Context(), `
+			UPDATE users SET balance_cents = balance_cents + $1, updated_at = NOW()
+			WHERE id = $2
+		`, req.AmountCents, userID); err != nil {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"credited_cents": req.AmountCents,
+			"dev_mode":       true,
+		})
+		return
+	}
+
+	stripe.Key = h.deps.Config.StripeSecretKey
+	params := &stripe.CheckoutSessionParams{
+		Mode: stripe.String(string(stripe.CheckoutSessionModePayment)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+					Currency: stripe.String("usd"),
+					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+						Name: stripe.String("IndraNet Wallet Top-Up"),
+					},
+					UnitAmount: stripe.Int64(req.AmountCents),
+				},
+				Quantity: stripe.Int64(1),
+			},
+		},
+		Metadata: map[string]string{
+			"type":    "wallet_topup",
+			"user_id": userID,
+		},
+		SuccessURL: stripe.String(h.deps.Config.FrontendBaseURL + "/dashboard?topup=success"),
+		CancelURL:  stripe.String(h.deps.Config.FrontendBaseURL + "/dashboard"),
+	}
+
+	session, err := stripecs.New(params)
+	if err != nil {
+		slog.Error("stripe: wallet topup checkout creation failed", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"checkout_url": session.URL})
 }
 
 // handlePaymentFailed marks a session FAILED when Stripe payment fails or is declined.

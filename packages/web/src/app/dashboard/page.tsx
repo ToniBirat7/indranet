@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api, UserProfile, SessionSummary } from '@/lib/api'
 import { getToken } from '@/lib/auth'
@@ -15,11 +15,24 @@ const STATE_COLORS: Record<string, string> = {
   FAILED: 'text-red-400',
 }
 
+const TOPUP_AMOUNTS = [
+  { label: '$5', cents: 500 },
+  { label: '$10', cents: 1000 },
+  { label: '$25', cents: 2500 },
+  { label: '$50', cents: 5000 },
+]
+
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const topupStatus = searchParams.get('topup')
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [toppingUp, setToppingUp] = useState(false)
+  const [topupNotice, setTopupNotice] = useState<string | null>(
+    topupStatus === 'success' ? 'Wallet topped up successfully.' : null,
+  )
 
   useEffect(() => {
     const token = getToken()
@@ -35,6 +48,26 @@ export default function DashboardPage() {
       .catch(() => router.push('/auth/login?return=/dashboard'))
       .finally(() => setLoading(false))
   }, [router])
+
+  async function handleTopup(cents: number) {
+    const token = getToken()
+    if (!token) return
+    setToppingUp(true)
+    try {
+      const res = await api.users.topup(cents, token)
+      if (res.checkout_url) {
+        window.location.href = res.checkout_url
+      } else {
+        // Dev mode — credited directly
+        setTopupNotice(`Wallet credited $${(cents / 100).toFixed(2)} (dev mode)`)
+        if (profile) setProfile({ ...profile, balance_cents: profile.balance_cents + cents })
+      }
+    } catch {
+      setTopupNotice('Top-up failed. Please try again.')
+    } finally {
+      setToppingUp(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -61,10 +94,29 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {topupNotice && (
+        <div className="mb-6 bg-green-900/40 border border-green-700 text-green-300 text-sm px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{topupNotice}</span>
+          <button onClick={() => setTopupNotice(null)} className="ml-4 text-green-500 hover:text-green-300">✕</button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gray-900 rounded-lg p-6">
-          <p className="text-gray-400 text-sm">Wallet Balance</p>
-          <p className="text-2xl font-bold text-white">${balanceDisplay}</p>
+        <div className="bg-gray-900 rounded-lg p-6 md:col-span-1">
+          <p className="text-gray-400 text-sm mb-1">Wallet Balance</p>
+          <p className="text-2xl font-bold text-white mb-4">${balanceDisplay}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {TOPUP_AMOUNTS.map((a) => (
+              <button
+                key={a.cents}
+                onClick={() => handleTopup(a.cents)}
+                disabled={toppingUp}
+                className="py-1.5 rounded text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:opacity-50 transition-colors"
+              >
+                +{a.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="bg-gray-900 rounded-lg p-6">
           <p className="text-gray-400 text-sm">Total Sessions</p>

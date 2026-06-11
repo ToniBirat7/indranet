@@ -61,6 +61,11 @@ export const api = {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       }),
+    connectStripe: (token: string) =>
+      apiFetch<{ onboarding_url: string }>('/hosts/me/stripe/connect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }),
   },
   sessions: {
     list: (token: string) =>
@@ -93,6 +98,12 @@ export const api = {
     me: (token: string) =>
       apiFetch<UserProfile>('/users/me', {
         headers: { Authorization: `Bearer ${token}` },
+      }),
+    topup: (amountCents: number, token: string) =>
+      apiFetch<{ checkout_url?: string; credited_cents?: number; dev_mode?: boolean }>('/users/me/topup', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount_cents: amountCents }),
       }),
   },
   auth: {

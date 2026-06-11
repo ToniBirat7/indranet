@@ -7,8 +7,7 @@ interface Props {
 }
 
 // InputCapture hooks keyboard and mouse events and sends them to the host via the WebRTC data channel.
-// Must be rendered as a sibling to StreamViewer after the WebRTC connection is established.
-// TODO: Mount this component once the data channel is open.
+// Rendered unconditionally alongside StreamViewer; the useEffect no-ops while dataChannel is null.
 export default function InputCapture({ dataChannel }: Props) {
   const locked = useRef(false)
 

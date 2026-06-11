@@ -3,11 +3,16 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	stripe "github.com/stripe/stripe-go/v76"
+	stripeaccount "github.com/stripe/stripe-go/v76/account"
+	stripeaccountlink "github.com/stripe/stripe-go/v76/accountlink"
 
 	"github.com/ToniBirat7/indranet/packages/backend/internal/models"
 )
@@ -242,4 +247,76 @@ func (h *Handlers) HostHeartbeat(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// ConnectStripeAccount creates or retrieves a Stripe Connect Express account for the host
+// and returns an onboarding URL. After completion, Stripe sends account.updated webhook.
+// POST /v1/hosts/me/stripe/connect
+func (h *Handlers) ConnectStripeAccount(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(ctxKeyUserID).(string)
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if h.deps.Config.StripeSecretKey == "" {
+		http.Error(w, "stripe not configured", http.StatusNotImplemented)
+		return
+	}
+
+	// Fetch host for this user
+	var hostID, stripeAccountID string
+	err := h.deps.Pool.QueryRow(r.Context(), `
+		SELECT id, COALESCE(stripe_account_id, '') FROM hosts WHERE user_id = $1 LIMIT 1
+	`, userID).Scan(&hostID, &stripeAccountID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "no host found for this user", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	stripe.Key = h.deps.Config.StripeSecretKey
+
+	// Create a new Express account if the host doesn't have one yet
+	if stripeAccountID == "" {
+		acct, err := stripeaccount.New(&stripe.AccountParams{
+			Type: stripe.String(string(stripe.AccountTypeExpress)),
+			Capabilities: &stripe.AccountCapabilitiesParams{
+				Transfers: &stripe.AccountCapabilitiesTransfersParams{
+					Requested: stripe.Bool(true),
+				},
+			},
+			BusinessType: stripe.String("individual"),
+			Metadata:     map[string]string{"indranet_host_id": hostID},
+		})
+		if err != nil {
+			slog.Error("stripe: create Connect account failed", "host_id", hostID, "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		stripeAccountID = acct.ID
+		if _, err := h.deps.Pool.Exec(r.Context(), `
+			UPDATE hosts SET stripe_account_id = $1, updated_at = NOW() WHERE id = $2
+		`, stripeAccountID, hostID); err != nil {
+			slog.Error("stripe: failed to store account_id", "host_id", hostID, "error", err)
+		}
+	}
+
+	// Create onboarding link
+	link, err := stripeaccountlink.New(&stripe.AccountLinkParams{
+		Account:    stripe.String(stripeAccountID),
+		RefreshURL: stripe.String(fmt.Sprintf("%s/dashboard/host?stripe=refresh", h.deps.Config.FrontendBaseURL)),
+		ReturnURL:  stripe.String(fmt.Sprintf("%s/dashboard/host?stripe=success", h.deps.Config.FrontendBaseURL)),
+		Type:       stripe.String("account_onboarding"),
+	})
+	if err != nil {
+		slog.Error("stripe: create account link failed", "account_id", stripeAccountID, "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"onboarding_url": link.URL})
 }
