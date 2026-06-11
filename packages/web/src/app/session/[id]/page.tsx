@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import StreamViewer from '@/components/session/StreamViewer'
 import BillingTimer from '@/components/session/BillingTimer'
 import { getToken } from '@/lib/auth'
@@ -25,14 +25,25 @@ const WS_URL = API_URL.replace(/^http/, 'ws')
 
 export default function SessionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const paymentStatus = searchParams.get('payment') // 'success' | 'cancelled' | null
   const [session, setSession] = useState<SessionState | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null)
   const [warning, setWarning] = useState(false)
   const [ended, setEnded] = useState(false)
 
+  // Redirect immediately if payment was cancelled
+  useEffect(() => {
+    if (paymentStatus === 'cancelled') {
+      router.push('/')
+    }
+  }, [paymentStatus, router])
+
   // Poll session state until ACTIVE or terminal
   useEffect(() => {
+    if (paymentStatus === 'cancelled') return
+
     const token = getToken()
     if (!token) {
       router.push(`/auth/login?return=/session/${params.id}`)
@@ -62,7 +73,7 @@ export default function SessionPage({ params }: { params: { id: string } }) {
 
     poll()
     return () => { active = false }
-  }, [params.id, router])
+  }, [params.id, router, paymentStatus])
 
   const handleBillingEvent = useCallback((event: BillingEvent) => {
     if (event.type === 'session_warning' && event.minutes_remaining !== undefined) {

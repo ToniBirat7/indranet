@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "dcedd54",
-      "subject": "refactor: align shared types/schemas with Go API contract",
-      "authoredAt": "2026-06-11T06:52:06+00:00",
+      "sha": "a361c81",
+      "subject": "chore: fix reset-db.sh and Makefile for Docker-only workflow",
+      "authoredAt": "2026-06-11T06:53:08+00:00",
       "ageDays": 0.0
     },
     "dirty": false,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T06:52:06+00:00",
+      "lastCommitAt": "2026-06-11T06:53:08+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 18,
-    "commitsLast30d": 20,
+    "commitsLast7d": 19,
+    "commitsLast30d": 21,
     "progress": 27,
     "activityDaily": [
       0,
@@ -223,30 +223,40 @@
       0,
       0,
       2,
-      16
+      17
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 20,
+    "activityTotal90d": 21,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 20
+        "commits": 21
       }
     ]
   },
-  "generatedAt": "2026-06-11T06:52:27.575086+00:00",
+  "generatedAt": "2026-06-11T06:53:27.668663+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "dcedd54",
+      "sha": "a361c81",
       "parents": [
-        "1f0d6f4"
+        "dcedd54"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "chore: fix reset-db.sh and Makefile for Docker-only workflow",
+      "at": "2026-06-11T06:53:08+00:00"
+    },
+    {
+      "sha": "dcedd54",
+      "parents": [
+        "1f0d6f4"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "refactor: align shared types/schemas with Go API contract",
       "at": "2026-06-11T06:52:06+00:00"
