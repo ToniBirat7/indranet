@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import HostGrid from '@/components/marketplace/HostGrid'
 import FilterBar from '@/components/marketplace/FilterBar'
 
@@ -17,7 +18,9 @@ export default function HomePage({ searchParams }: Props) {
         </p>
       </div>
 
-      <FilterBar />
+      <Suspense fallback={<div className="h-14 mb-6" />}>
+        <FilterBar />
+      </Suspense>
       <HostGrid searchParams={searchParams} />
     </div>
   )
