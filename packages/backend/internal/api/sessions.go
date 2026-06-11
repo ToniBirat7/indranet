@@ -469,14 +469,14 @@ func (h *Handlers) RateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify session is ENDED and owned by this user; get host_id and check not already rated.
+	// Verify session is ENDED and owned by this user; fetch host_id in one query.
+	// No need to pre-check `rated` here — the UPDATE below uses `WHERE rating IS NULL`
+	// as the atomic guard, preventing double-rating even under concurrent requests.
 	var hostID string
-	var rated bool
 	err := h.deps.Pool.QueryRow(r.Context(), `
-		SELECT host_id, rating IS NOT NULL
-		FROM sessions
+		SELECT host_id FROM sessions
 		WHERE id = $1 AND user_id = $2 AND state = 'ENDED'
-	`, sessionID, userID).Scan(&hostID, &rated)
+	`, sessionID, userID).Scan(&hostID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "session not found or not ended", http.StatusNotFound)
@@ -485,12 +485,9 @@ func (h *Handlers) RateSession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	if rated {
-		http.Error(w, "session already rated", http.StatusConflict)
-		return
-	}
 
-	// Atomically record rating on session and update host aggregate.
+	// Atomically record rating and update host aggregate.
+	// WHERE rating IS NULL ensures exactly one rating per session under concurrent requests.
 	tx, err := h.deps.Pool.Begin(r.Context())
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -498,11 +495,16 @@ func (h *Handlers) RateSession(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context()) //nolint:errcheck
 
-	if _, err := tx.Exec(r.Context(),
-		`UPDATE sessions SET rating = $1, updated_at = NOW() WHERE id = $2`,
+	tag, err := tx.Exec(r.Context(),
+		`UPDATE sessions SET rating = $1, updated_at = NOW() WHERE id = $2 AND rating IS NULL`,
 		req.Stars, sessionID,
-	); err != nil {
+	)
+	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		http.Error(w, "session already rated", http.StatusConflict)
 		return
 	}
 	if _, err := tx.Exec(r.Context(), `
