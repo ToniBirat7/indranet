@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -71,12 +72,16 @@ func (rl *rateLimiter) prune() {
 	}
 }
 
-// clientIP returns the normalized remote address.
-// chi's RealIP middleware (applied before rate limiting) has already set
-// r.RemoteAddr to the real client IP from X-Forwarded-For / X-Real-IP,
-// so we use that rather than re-reading the header (which can be a multi-IP list).
+// clientIP returns the client's IP without the port suffix.
+// chi's RealIP middleware may have already set r.RemoteAddr to the forwarded IP
+// (no port), but for direct connections it remains "IP:PORT". We always strip
+// the port so that all requests from the same IP share a rate limit bucket.
 func clientIP(r *http.Request) string {
-	return r.RemoteAddr
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr // already bare IP (set by chi RealIP from header)
+	}
+	return host
 }
 
 // authRateLimitMiddleware limits /auth/* requests: 20 per minute per IP.
