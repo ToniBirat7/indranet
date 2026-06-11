@@ -294,10 +294,15 @@ func (h *Handlers) HostHeartbeat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.deps.Pool.Exec(r.Context(), `
+	tag, err := h.deps.Pool.Exec(r.Context(), `
 		UPDATE hosts SET online = true, updated_at = NOW() WHERE id = $1
-	`, hostID); err != nil {
+	`, hostID)
+	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		http.Error(w, "host not found", http.StatusNotFound)
 		return
 	}
 

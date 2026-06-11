@@ -248,16 +248,20 @@ func (h *Handlers) GetSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 
 	var session models.Session
+	var userBalanceCents int64
 	err := h.deps.Pool.QueryRow(r.Context(), `
-		SELECT id, user_id, host_id, state, rate_per_minute_cents,
-		       pre_auth_minutes, total_charged_cents, started_at, created_at
-		FROM sessions
-		WHERE id = $1 AND user_id = $2
+		SELECT s.id, s.user_id, s.host_id, s.state, s.rate_per_minute_cents,
+		       s.pre_auth_minutes, s.total_charged_cents, s.started_at, s.created_at,
+		       u.balance_cents
+		FROM sessions s
+		JOIN users u ON u.id = s.user_id
+		WHERE s.id = $1 AND s.user_id = $2
 	`, sessionID, userID,
 	).Scan(
 		&session.ID, &session.UserID, &session.HostID, &session.State,
 		&session.RatePerMinuteCents, &session.PreAuthMinutes,
 		&session.TotalChargedCents, &session.StartedAt, &session.CreatedAt,
+		&userBalanceCents,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -267,11 +271,6 @@ func (h *Handlers) GetSession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-
-	var userBalanceCents int64
-	_ = h.deps.Pool.QueryRow(r.Context(),
-		`SELECT balance_cents FROM users WHERE id = $1`, userID,
-	).Scan(&userBalanceCents)
 
 	var remainingMinutes int64
 	if session.RatePerMinuteCents > 0 {
@@ -337,17 +336,10 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var total int
-	if err := h.deps.Pool.QueryRow(r.Context(),
-		`SELECT COUNT(*) FROM sessions WHERE user_id = $1`, userID,
-	).Scan(&total); err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
 	rows, err := h.deps.Pool.Query(r.Context(), `
 		SELECT s.id, s.host_id, h.display_name, s.state, s.rate_per_minute_cents,
-		       s.total_charged_cents, s.started_at, s.created_at
+		       s.total_charged_cents, s.started_at, s.created_at,
+		       COUNT(*) OVER() AS total_count
 		FROM sessions s
 		JOIN hosts h ON h.id = s.host_id
 		WHERE s.user_id = $1
@@ -371,12 +363,13 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 		CreatedAt          interface{}         `json:"created_at"`
 	}
 
+	var total int
 	var sessions []sessionSummary
 	for rows.Next() {
 		var s sessionSummary
 		if err := rows.Scan(
 			&s.ID, &s.HostID, &s.HostName, &s.State, &s.RatePerMinuteCents,
-			&s.TotalChargedCents, &s.StartedAt, &s.CreatedAt,
+			&s.TotalChargedCents, &s.StartedAt, &s.CreatedAt, &total,
 		); err != nil {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return

@@ -192,7 +192,7 @@ func (h *Handlers) TopUpWallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.AmountCents < 100 || req.AmountCents > 50_000 {
-		http.Error(w, "amount_cents must be between 100 and 50000 ($0.01–$500.00)", http.StatusBadRequest)
+		http.Error(w, "amount_cents must be between 100 and 50000 ($1.00–$500.00)", http.StatusBadRequest)
 		return
 	}
 
