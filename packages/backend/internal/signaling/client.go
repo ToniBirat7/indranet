@@ -59,8 +59,7 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		// Relay to the other participant in the session
-		c.hub.broadcast <- sessionMessage{sessionID: c.sessionID, payload: message}
+		c.hub.broadcast <- sessionMessage{sessionID: c.sessionID, senderRole: c.role, payload: message}
 	}
 }
 

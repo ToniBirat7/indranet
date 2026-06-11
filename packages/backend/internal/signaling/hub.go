@@ -25,8 +25,9 @@ type Session struct {
 }
 
 type sessionMessage struct {
-	sessionID string
-	payload   []byte
+	sessionID  string
+	senderRole string // "host" | "viewer" | "" (hub-injected)
+	payload    []byte
 }
 
 // NewHub creates a new signaling Hub.
@@ -101,15 +102,28 @@ func (h *Hub) relayMessage(msg sessionMessage) {
 		return
 	}
 
-	// Relay to both participants (each client filters its own messages)
-	for _, c := range []*Client{sess.host, sess.viewer} {
-		if c != nil {
-			select {
-			case c.send <- msg.payload:
-			default:
-				slog.Warn("signaling: client send buffer full", "session_id", msg.sessionID)
-			}
+	send := func(c *Client) {
+		if c == nil {
+			return
 		}
+		select {
+		case c.send <- msg.payload:
+		default:
+			slog.Warn("signaling: client send buffer full", "session_id", msg.sessionID, "role", c.role)
+		}
+	}
+
+	// Relay to the opposite participant only (not the sender).
+	// msg.senderRole is set by ReadPump; hub-injected messages (e.g. billing events)
+	// use senderRole="" which fans out to both participants.
+	switch msg.senderRole {
+	case "host":
+		send(sess.viewer)
+	case "viewer":
+		send(sess.host)
+	default:
+		send(sess.host)
+		send(sess.viewer)
 	}
 }
 
