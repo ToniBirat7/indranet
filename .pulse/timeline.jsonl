@@ -20,3 +20,4 @@
 {"id": "ci:default:8129ef6:pending", "type": "ci", "at": "2026-06-11T06:18:28.868188+00:00", "summary": "CI pending on main"}
 {"id": "commit:975425f", "type": "commit", "at": "2026-06-11T06:18:33+00:00", "summary": "chore(pulse): sync project state — billing+web MVPs complete"}
 {"id": "commit:d7213bd", "type": "commit", "at": "2026-06-11T06:25:48+00:00", "summary": "feat: session viewer + dashboards + user/session list endpoints"}
+{"id": "commit:542c2ee", "type": "commit", "at": "2026-06-11T06:30:53+00:00", "summary": "feat: payment failure handler, Stripe PaymentIntent metadata, StreamViewer input capture"}

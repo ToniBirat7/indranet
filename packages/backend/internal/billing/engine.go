@@ -47,7 +47,10 @@ func (e *Engine) Run() {
 	defer e.wg.Done()
 
 	ticker := time.NewTicker(e.tickEvery)
+	// Sweep stuck ENDING sessions and stale hosts every 2 minutes.
+	sweepTicker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
+	defer sweepTicker.Stop()
 
 	slog.Info("billing engine running", "tick_interval", e.tickEvery)
 
@@ -55,6 +58,8 @@ func (e *Engine) Run() {
 		select {
 		case <-ticker.C:
 			e.tick()
+		case <-sweepTicker.C:
+			e.sweep()
 		case <-e.stopCh:
 			slog.Info("billing engine stopped")
 			return
@@ -203,4 +208,34 @@ func (e *Engine) sendWarning(sessionID string, minutesRemaining int) {
 		"type":              "session_warning",
 		"minutes_remaining": minutesRemaining,
 	})
+}
+
+// sweep finalizes sessions stuck in ENDING and marks stale host agents offline.
+// Runs every 2 minutes as a safety net alongside normal billing ticks.
+func (e *Engine) sweep() {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// ENDING sessions older than 5 minutes → ENDED (agent teardown already complete or timed out).
+	tag, err := e.pool.Exec(ctx, `
+		UPDATE sessions
+		SET state = 'ENDED', ended_at = NOW(), updated_at = NOW()
+		WHERE state = 'ENDING' AND updated_at < NOW() - INTERVAL '5 minutes'
+	`)
+	if err != nil {
+		slog.Error("billing: sweep ENDING→ENDED failed", "error", err)
+	} else if tag.RowsAffected() > 0 {
+		slog.Info("billing: swept ENDING→ENDED", "count", tag.RowsAffected())
+	}
+
+	// Hosts whose agent hasn't sent a heartbeat in 3 minutes → offline.
+	tag, err = e.pool.Exec(ctx, `
+		UPDATE hosts SET online = false, updated_at = NOW()
+		WHERE online = true AND updated_at < NOW() - INTERVAL '3 minutes'
+	`)
+	if err != nil {
+		slog.Error("billing: sweep stale hosts failed", "error", err)
+	} else if tag.RowsAffected() > 0 {
+		slog.Info("billing: marked stale hosts offline", "count", tag.RowsAffected())
+	}
 }

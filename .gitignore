@@ -27,6 +27,7 @@ packages/client/src-tauri/target/
 node_modules/
 .pnpm-store/
 .turbo/
+*.tsbuildinfo
 packages/web/.next/
 packages/web/out/
 packages/client/dist/

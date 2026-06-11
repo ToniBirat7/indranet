@@ -82,10 +82,16 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.deps.Config.StripeSecretKey == "" {
-		// Dev mode: auto-authorize so the full flow is testable without Stripe
+		// Dev mode: auto-authorize and credit wallet so billing engine works end-to-end.
+		devTotalCents := ratePerMinuteCents * int64(req.DurationMinutes)
 		if _, err := h.deps.Pool.Exec(r.Context(), `
-			UPDATE sessions SET state = 'AUTHORIZED', updated_at = NOW() WHERE id = $1
-		`, sessionID); err != nil {
+			WITH s AS (
+				UPDATE sessions SET state = 'AUTHORIZED', updated_at = NOW()
+				WHERE id = $1 RETURNING user_id
+			)
+			UPDATE users SET balance_cents = balance_cents + $2, updated_at = NOW()
+			FROM s WHERE users.id = s.user_id
+		`, sessionID, devTotalCents); err != nil {
 			slog.Error("dev auto-authorize failed", "session_id", sessionID, "error", err)
 		} else {
 			resp["state"] = "AUTHORIZED"

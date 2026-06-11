@@ -189,3 +189,57 @@ func (h *Handlers) RegisterHost(w http.ResponseWriter, r *http.Request) {
 		"agent_token": agentToken,
 	})
 }
+
+// SetHostOnline marks a host as online or offline. Called by the host agent on startup/shutdown.
+// Uses agent JWT auth (hostID is extracted from the token claim, not a URL param).
+func (h *Handlers) SetHostOnline(w http.ResponseWriter, r *http.Request) {
+	hostID, _ := r.Context().Value(ctxKeyUserID).(string)
+	if hostID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Online bool `json:"online"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	tag, err := h.deps.Pool.Exec(r.Context(), `
+		UPDATE hosts SET online = $1, updated_at = NOW() WHERE id = $2
+	`, req.Online, hostID)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		http.Error(w, "host not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"online": req.Online})
+}
+
+// HostHeartbeat records agent activity and returns the host's current status.
+// The agent should call this every 60 seconds while running. The billing sweep
+// marks hosts offline after 3 minutes without a heartbeat.
+func (h *Handlers) HostHeartbeat(w http.ResponseWriter, r *http.Request) {
+	hostID, _ := r.Context().Value(ctxKeyUserID).(string)
+	if hostID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if _, err := h.deps.Pool.Exec(r.Context(), `
+		UPDATE hosts SET updated_at = NOW() WHERE id = $1
+	`, hostID); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/webhook"
 
@@ -81,34 +83,58 @@ func (h *Handlers) handleCheckoutComplete(ctx context.Context, event stripe.Even
 		return nil
 	}
 
-	tag, err := h.deps.Pool.Exec(ctx, `
+	// Authorize session and credit user wallet in one transaction so billing
+	// engine never sees a zero balance between AUTHORIZED and ACTIVE.
+	tx, err := h.deps.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var userID string
+	var totalCents int64
+	err = tx.QueryRow(ctx, `
 		UPDATE sessions
 		SET state = 'AUTHORIZED', stripe_checkout_id = $1, updated_at = NOW()
 		WHERE id = $2 AND state = 'CREATED'
-	`, checkoutSession.ID, internalSessionID)
+		RETURNING user_id, rate_per_minute_cents * pre_auth_minutes
+	`, checkoutSession.ID, internalSessionID).Scan(&userID, &totalCents)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			slog.Warn("stripe: session not in CREATED state, ignoring duplicate webhook",
+				"session_id", internalSessionID,
+				"stripe_session_id", checkoutSession.ID,
+			)
+			return nil
+		}
 		return fmt.Errorf("authorize session: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		slog.Warn("stripe: session not in CREATED state, ignoring duplicate webhook",
-			"session_id", internalSessionID,
-			"stripe_session_id", checkoutSession.ID,
-		)
-		return nil
+
+	// Credit the user's wallet so the billing engine has funds to deduct.
+	if _, err := tx.Exec(ctx, `
+		UPDATE users SET balance_cents = balance_cents + $1, updated_at = NOW()
+		WHERE id = $2
+	`, totalCents, userID); err != nil {
+		return fmt.Errorf("credit wallet: %w", err)
 	}
 
-	slog.Info("stripe: session authorized",
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	slog.Info("stripe: session authorized and wallet credited",
 		"stripe_session_id", checkoutSession.ID,
 		"indranet_session_id", internalSessionID,
+		"credited_cents", totalCents,
 	)
 
-	// Notify the host agent that it should prepare the sandbox
+	// Notify the host agent that it should prepare the sandbox.
 	h.deps.Hub.SendToSession(internalSessionID, map[string]string{
 		"type":       "session_authorized",
 		"session_id": internalSessionID,
 	})
 
-	// If agent doesn't confirm ACTIVE within 5 minutes, mark FAILED
+	// If agent doesn't confirm ACTIVE within 5 minutes, mark FAILED.
 	go h.awaitAgentReady(internalSessionID, 5*time.Minute)
 
 	return nil

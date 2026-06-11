@@ -66,8 +66,12 @@ func NewRouter(deps RouterDeps) http.Handler {
 		// Agent-authenticated routes (host agent JWT)
 		r.Group(func(r chi.Router) {
 			r.Use(h.AgentAuthMiddleware)
+			// Session lifecycle (agent-driven)
 			r.Put("/sessions/{id}/start", h.StartSession)
 			r.Put("/sessions/{id}/heartbeat", h.HeartbeatSession)
+			// Host status management
+			r.Put("/hosts/me/online", h.SetHostOnline)
+			r.Put("/hosts/me/heartbeat", h.HostHeartbeat)
 		})
 
 		// WebSocket signaling
