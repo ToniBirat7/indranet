@@ -11,17 +11,21 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	stripe "github.com/stripe/stripe-go/v76"
+	stripetransfer "github.com/stripe/stripe-go/v76/transfer"
 )
 
 // Engine is the billing tick loop. It runs in a dedicated goroutine.
 type Engine struct {
-	pool           *pgxpool.Pool
-	rdb            *redis.Client
-	hub            HubNotifier
-	tickEvery      time.Duration
-	warningMinutes int
-	stopCh         chan struct{}
-	wg             sync.WaitGroup
+	pool               *pgxpool.Pool
+	rdb                *redis.Client
+	hub                HubNotifier
+	tickEvery          time.Duration
+	warningMinutes     int
+	stripeKey          string
+	platformFeePercent int
+	stopCh             chan struct{}
+	wg                 sync.WaitGroup
 }
 
 // HubNotifier is the minimal interface the billing engine needs from the signaling hub.
@@ -30,14 +34,16 @@ type HubNotifier interface {
 }
 
 // NewEngine creates a new billing engine.
-func NewEngine(pool *pgxpool.Pool, rdb *redis.Client, hub HubNotifier, tickEvery time.Duration, warningMinutes int) *Engine {
+func NewEngine(pool *pgxpool.Pool, rdb *redis.Client, hub HubNotifier, tickEvery time.Duration, warningMinutes int, stripeKey string, platformFeePercent int) *Engine {
 	return &Engine{
-		pool:           pool,
-		rdb:            rdb,
-		hub:            hub,
-		tickEvery:      tickEvery,
-		warningMinutes: warningMinutes,
-		stopCh:         make(chan struct{}),
+		pool:               pool,
+		rdb:                rdb,
+		hub:                hub,
+		tickEvery:          tickEvery,
+		warningMinutes:     warningMinutes,
+		stripeKey:          stripeKey,
+		platformFeePercent: platformFeePercent,
+		stopCh:             make(chan struct{}),
 	}
 }
 
@@ -210,37 +216,119 @@ func (e *Engine) sendWarning(sessionID string, minutesRemaining int) {
 	})
 }
 
+type endedSession struct {
+	sessionID          string
+	hostID             string
+	totalChargedCents  int64
+	stripeAccountID    string
+	payoutsEnabled     bool
+}
+
 // sweep finalizes sessions stuck in ENDING and marks stale host agents offline.
 // Runs every 2 minutes as a safety net alongside normal billing ticks.
 func (e *Engine) sweep() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// ENDING sessions older than 5 minutes → ENDED; increment host session count.
-	tag, err := e.pool.Exec(ctx, `
+	// Transition ENDING→ENDED (older than 5 min), collect session data for payouts.
+	rows, err := e.pool.Query(ctx, `
 		WITH ended AS (
 			UPDATE sessions
 			SET state = 'ENDED', ended_at = NOW(), updated_at = NOW()
 			WHERE state = 'ENDING' AND updated_at < NOW() - INTERVAL '5 minutes'
-			RETURNING host_id
+			RETURNING id, host_id, total_charged_cents
+		),
+		_ AS (
+			UPDATE hosts SET total_sessions = total_sessions + 1, updated_at = NOW()
+			FROM ended WHERE hosts.id = ended.host_id
 		)
-		UPDATE hosts SET total_sessions = total_sessions + 1, updated_at = NOW()
-		FROM ended WHERE hosts.id = ended.host_id
+		SELECT e.id, e.host_id, e.total_charged_cents,
+		       COALESCE(h.stripe_account_id, ''), h.payouts_enabled
+		FROM ended e
+		JOIN hosts h ON h.id = e.host_id
 	`)
 	if err != nil {
 		slog.Error("billing: sweep ENDING→ENDED failed", "error", err)
-	} else if tag.RowsAffected() > 0 {
-		slog.Info("billing: swept ENDING→ENDED", "count", tag.RowsAffected())
+	} else {
+		var ended []endedSession
+		for rows.Next() {
+			var s endedSession
+			if err := rows.Scan(&s.sessionID, &s.hostID, &s.totalChargedCents, &s.stripeAccountID, &s.payoutsEnabled); err == nil {
+				ended = append(ended, s)
+			}
+		}
+		rows.Close()
+		if len(ended) > 0 {
+			slog.Info("billing: swept ENDING→ENDED", "count", len(ended))
+			for _, s := range ended {
+				e.transferHostPayout(s)
+			}
+		}
 	}
 
 	// Hosts whose agent hasn't sent a heartbeat in 3 minutes → offline.
-	tag, err = e.pool.Exec(ctx, `
+	if tag, err2 := e.pool.Exec(ctx, `
 		UPDATE hosts SET online = false, updated_at = NOW()
 		WHERE online = true AND updated_at < NOW() - INTERVAL '3 minutes'
-	`)
-	if err != nil {
-		slog.Error("billing: sweep stale hosts failed", "error", err)
+	`); err2 != nil {
+		slog.Error("billing: sweep stale hosts failed", "error", err2)
 	} else if tag.RowsAffected() > 0 {
 		slog.Info("billing: marked stale hosts offline", "count", tag.RowsAffected())
 	}
+
+	// CREATED sessions older than 30 minutes → FAILED (payment never completed).
+	if tag2, err2 := e.pool.Exec(ctx, `
+		UPDATE sessions SET state = 'FAILED', updated_at = NOW()
+		WHERE state = 'CREATED' AND created_at < NOW() - INTERVAL '30 minutes'
+	`); err2 != nil {
+		slog.Error("billing: sweep abandoned CREATED→FAILED failed", "error", err2)
+	} else if tag2.RowsAffected() > 0 {
+		slog.Info("billing: swept abandoned CREATED sessions to FAILED", "count", tag2.RowsAffected())
+	}
+}
+
+// transferHostPayout creates a Stripe Transfer sending 80% (platform keeps 20%) of
+// total_charged_cents to the host's Connect account. No-op in dev (no Stripe key).
+func (e *Engine) transferHostPayout(s endedSession) {
+	if e.stripeKey == "" {
+		return // dev mode — no real payments
+	}
+	if !s.payoutsEnabled || s.stripeAccountID == "" {
+		slog.Warn("billing: skipping payout — host payouts not enabled",
+			"session_id", s.sessionID, "host_id", s.hostID)
+		return
+	}
+	if s.totalChargedCents <= 0 {
+		return
+	}
+
+	hostPercent := int64(100 - e.platformFeePercent)
+	payoutCents := s.totalChargedCents * hostPercent / 100
+
+	stripe.Key = e.stripeKey
+	params := &stripe.TransferParams{
+		Amount:        stripe.Int64(payoutCents),
+		Currency:      stripe.String(string(stripe.CurrencyUSD)),
+		Destination:   stripe.String(s.stripeAccountID),
+		TransferGroup: stripe.String("session_" + s.sessionID),
+	}
+	params.AddMetadata("session_id", s.sessionID)
+	params.AddMetadata("host_id", s.hostID)
+
+	t, err := stripetransfer.New(params)
+	if err != nil {
+		slog.Error("billing: Stripe transfer failed",
+			"session_id", s.sessionID,
+			"host_id", s.hostID,
+			"amount_cents", payoutCents,
+			"error", err,
+		)
+		return
+	}
+	slog.Info("billing: host payout transferred",
+		"session_id", s.sessionID,
+		"host_id", s.hostID,
+		"transfer_id", t.ID,
+		"amount_cents", payoutCents,
+	)
 }

@@ -151,6 +151,30 @@ services:
       - indranet-net
     profiles: [dev]
 
+  web-dev:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile.dev
+    container_name: indranet-web-dev
+    restart: unless-stopped
+    volumes:
+      - ./packages/shared:/app/packages/shared
+      - ./packages/web:/app/packages/web
+      # Prevent host node_modules from shadowing container's installed deps
+      - /app/packages/shared/node_modules
+      - /app/packages/web/node_modules
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-dev
+    networks:
+      - indranet-net
+    profiles: [dev]
+
   # ── App services (profile: prod) ─────────────────────────────────────────
 
   backend:

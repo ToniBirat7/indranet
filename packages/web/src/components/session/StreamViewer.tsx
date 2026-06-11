@@ -46,10 +46,21 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
     ws.onclose = () => setState((prev) => (prev === 'connected' ? 'error' : prev))
   }
 
+  function buildIceServers(): RTCIceServer[] {
+    const servers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
+    const turnUrl = process.env.NEXT_PUBLIC_TURN_URL
+    if (turnUrl) {
+      servers.push({
+        urls: turnUrl,
+        username: process.env.NEXT_PUBLIC_TURN_USERNAME ?? '',
+        credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL ?? '',
+      })
+    }
+    return servers
+  }
+
   function setupPeerConnection(ws: WebSocket) {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-    })
+    const pc = new RTCPeerConnection({ iceServers: buildIceServers() })
     pcRef.current = pc
 
     // Input data channel — ordered: false, maxRetransmits: 0 for minimal latency

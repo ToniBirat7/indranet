@@ -71,6 +71,8 @@ func main() {
 		pool, rdb, hub,
 		time.Duration(cfg.BillingTickSeconds)*time.Second,
 		cfg.SessionWarningMinutes,
+		cfg.StripeSecretKey,
+		cfg.StripePlatformFeePercent,
 	)
 	go billingEngine.Run()
 	slog.Info("billing engine started")

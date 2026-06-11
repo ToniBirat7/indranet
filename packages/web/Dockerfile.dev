@@ -1,0 +1,13 @@
+FROM node:20-alpine
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+# Install deps; actual source is bind-mounted at runtime
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/web/package.json ./packages/web/
+RUN pnpm install --frozen-lockfile --filter @indranet/web...
+# Copy source so the image can start if volume mount isn't used
+COPY packages/shared ./packages/shared
+COPY packages/web ./packages/web
+EXPOSE 3000
+CMD ["pnpm", "--filter", "@indranet/web", "dev"]
