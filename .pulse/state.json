@@ -5,7 +5,7 @@
   "description": "IndraNet — peer-to-peer interactive compute marketplace for renting idle gaming PCs as live GUI sessions.",
   "status": "active",
   "statusReason": null,
-  "currentFeature": "session billing, payouts, marketplace filters",
+  "currentFeature": "backend hardening + API test coverage + DB schema fixes",
   "currentPhase": "implementation",
   "milestones": [
     {
@@ -50,6 +50,13 @@
       "due": null,
       "status": "planned",
       "source": "machine"
+    },
+    {
+      "id": "m:phase-0-poc-stripe-gated-webrtc-stream-end-to-en",
+      "title": "Phase 0 PoC: Stripe-gated WebRTC stream end-to-end",
+      "due": null,
+      "status": "in_progress",
+      "source": "machine"
     }
   ],
   "links": [],
@@ -62,9 +69,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "9c4941a",
-      "subject": "fix(web): Suspense boundary around FilterBar for useSearchParams",
-      "authoredAt": "2026-06-11T08:13:56+00:00",
+      "sha": "d015607",
+      "subject": "feat(web): handle session_state WebSocket event for instant ACTIVE transition",
+      "authoredAt": "2026-06-11T10:56:18+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +82,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T08:13:56+00:00",
+      "lastCommitAt": "2026-06-11T10:56:18+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -109,7 +116,7 @@
       "research",
       "scripts"
     ],
-    "summary": "Go backend with Stripe Connect payouts (80/20 split), WebRTC signaling with JWT auth, Next.js marketplace with functional filters, billing engine with ENDING→ENDED sweep and CREATED→FAILED cleanup.",
+    "summary": "Go backend (chi, pgx, stripe-go) + Next.js 14 web + PostgreSQL/Redis/NATS stack; Docker-only dev; WebRTC signaling hub; per-minute billing engine",
     "overviewDoc": "overview.md"
   },
   "human": {
@@ -125,14 +132,14 @@
     "pinned": false
   },
   "metrics": {
-    "openTasks": 19,
+    "openTasks": 25,
     "doingTasks": 1,
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 54,
-    "commitsLast30d": 56,
-    "progress": 26,
+    "commitsLast7d": 103,
+    "commitsLast30d": 105,
+    "progress": 25,
     "activityDaily": [
       0,
       0,
@@ -223,30 +230,520 @@
       0,
       0,
       2,
-      52
+      101
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 56,
+    "activityTotal90d": 105,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 56
+        "commits": 105
       }
     ]
   },
-  "generatedAt": "2026-06-11T08:20:08.272636+00:00",
-  "generatedBy": "pulse-autosync@0.1.0",
+  "generatedAt": "2026-06-11T10:56:50.350661+00:00",
+  "generatedBy": "pulse-skill@0.1.0",
   "commitGraph": [
     {
-      "sha": "9c4941a",
+      "sha": "d015607",
       "parents": [
-        "f94b0ef"
+        "59369e8"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "feat(web): handle session_state WebSocket event for instant ACTIVE transition",
+      "at": "2026-06-11T10:56:18+00:00"
+    },
+    {
+      "sha": "59369e8",
+      "parents": [
+        "a7476f4"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): return 500 if DB update fails after Stripe account creation",
+      "at": "2026-06-11T10:54:18+00:00"
+    },
+    {
+      "sha": "a7476f4",
+      "parents": [
+        "f214006"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(test): correct host ID key in ListHosts/GetHost tests",
+      "at": "2026-06-11T10:53:25+00:00"
+    },
+    {
+      "sha": "f214006",
+      "parents": [
+        "f7d4947"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(db): migration 008 — explicit FK ON DELETE + unique Stripe indexes",
+      "at": "2026-06-11T10:47:34+00:00"
+    },
+    {
+      "sha": "f7d4947",
+      "parents": [
+        "76ca6ab"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "test(api): add coverage for ListHosts, GetHost, HostHeartbeat",
+      "at": "2026-06-11T10:43:46+00:00"
+    },
+    {
+      "sha": "76ca6ab",
+      "parents": [
+        "08b42bf"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): guard WebRTC SDP ops + log end-session failure",
+      "at": "2026-06-11T10:40:39+00:00"
+    },
+    {
+      "sha": "08b42bf",
+      "parents": [
+        "566e861"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): rows.Err() check in GetPendingSessions + Signal DB error handling",
+      "at": "2026-06-11T10:38:06+00:00"
+    },
+    {
+      "sha": "566e861",
+      "parents": [
+        "9ea4dbc"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(billing): log scan errors + centralize stripe.Key init",
+      "at": "2026-06-11T10:35:13+00:00"
+    },
+    {
+      "sha": "9ea4dbc",
+      "parents": [
+        "24a432a"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(scripts): gen-lockfiles.sh — skip go mod init when go.mod already exists",
+      "at": "2026-06-11T10:30:02+00:00"
+    },
+    {
+      "sha": "24a432a",
+      "parents": [
+        "aa91e8b"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(scripts): rewrite setup.sh to Docker-only — remove local Go/Node/pnpm checks",
+      "at": "2026-06-11T10:29:20+00:00"
+    },
+    {
+      "sha": "aa91e8b",
+      "parents": [
+        "dc35244"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(tests): stop hub and billing engine in test cleanup",
+      "at": "2026-06-11T10:27:58+00:00"
+    },
+    {
+      "sha": "dc35244",
+      "parents": [
+        "a789489"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(backend): add Vary: Origin header to CORS responses",
+      "at": "2026-06-11T10:26:50+00:00"
+    },
+    {
+      "sha": "a789489",
+      "parents": [
+        "99b2c76"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(backend): idempotent wallet top-up — prevent double credit on duplicate webhook",
+      "at": "2026-06-11T10:25:35+00:00"
+    },
+    {
+      "sha": "99b2c76",
+      "parents": [
+        "64acac9"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): BillingTimer shows accurate elapsed time from session start",
+      "at": "2026-06-11T10:24:06+00:00"
+    },
+    {
+      "sha": "64acac9",
+      "parents": [
+        "9a904f7"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(backend): set Content-Type before WriteHeader in Health; return 401 from GetMe on missing user",
+      "at": "2026-06-11T10:20:38+00:00"
+    },
+    {
+      "sha": "9a904f7",
+      "parents": [
+        "c6b58c0"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(backend): add GET /v1/hosts/me agent endpoint",
+      "at": "2026-06-11T10:15:57+00:00"
+    },
+    {
+      "sha": "c6b58c0",
+      "parents": [
+        "69c2956"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(backend): capture last redis ping error in retry loop",
+      "at": "2026-06-11T10:13:30+00:00"
+    },
+    {
+      "sha": "69c2956",
+      "parents": [
+        "1907cc8"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(signaling): prevent shutdown deadlock in hub.SendToSession",
+      "at": "2026-06-11T10:09:31+00:00"
+    },
+    {
+      "sha": "1907cc8",
+      "parents": [
+        "1c3f0d6"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(config): warn when STRIPE_WEBHOOK_SECRET is missing but key is set",
+      "at": "2026-06-11T10:03:41+00:00"
+    },
+    {
+      "sha": "1c3f0d6",
+      "parents": [
+        "10f5fa2"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "test(api): add regression test for agent IDOR fix",
+      "at": "2026-06-11T10:01:46+00:00"
+    },
+    {
+      "sha": "10f5fa2",
+      "parents": [
+        "4718ce6"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): guard RTCDataChannel.send against closed state",
+      "at": "2026-06-11T09:59:35+00:00"
+    },
+    {
+      "sha": "4718ce6",
+      "parents": [
+        "19bc571"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(security): patch 5 vulnerabilities across backend and PoC servers",
+      "at": "2026-06-11T09:56:56+00:00"
+    },
+    {
+      "sha": "19bc571",
+      "parents": [
+        "8248176"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web/docker): declare NEXT_PUBLIC_* as ARG in builder stage",
+      "at": "2026-06-11T09:48:47+00:00"
+    },
+    {
+      "sha": "8248176",
+      "parents": [
+        "e9c081c"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web/docker): correct static asset paths in standalone runner stage",
+      "at": "2026-06-11T09:46:06+00:00"
+    },
+    {
+      "sha": "e9c081c",
+      "parents": [
+        "4b3cce8"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): use API_URL for all server-side fetches (3 Server Components)",
+      "at": "2026-06-11T09:42:50+00:00"
+    },
+    {
+      "sha": "4b3cce8",
+      "parents": [
+        "7491e35"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(docker): separate server-side API_URL from browser NEXT_PUBLIC_API_URL",
+      "at": "2026-06-11T09:41:48+00:00"
+    },
+    {
+      "sha": "7491e35",
+      "parents": [
+        "17ab4bc"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): host price min=$0.60, handle stripe=refresh redirect",
+      "at": "2026-06-11T09:27:31+00:00"
+    },
+    {
+      "sha": "17ab4bc",
+      "parents": [
+        "caa25e7"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): match backend integer division for session price display",
+      "at": "2026-06-11T09:26:38+00:00"
+    },
+    {
+      "sha": "caa25e7",
+      "parents": [
+        "9efbde5"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(db): add non-negative balance constraint (NOT VALID)",
+      "at": "2026-06-11T09:25:43+00:00"
+    },
+    {
+      "sha": "9efbde5",
+      "parents": [
+        "261bd4b"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(config): enforce JWT_SECRET in prod, validate billing tick and fee percent",
+      "at": "2026-06-11T09:24:42+00:00"
+    },
+    {
+      "sha": "261bd4b",
+      "parents": [
+        "844f466"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix: zero-rate guard, min host price, and billing cap test",
+      "at": "2026-06-11T09:23:07+00:00"
+    },
+    {
+      "sha": "844f466",
+      "parents": [
+        "36627a0"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "refactor(billing): drop unused balanceCents param from tick loop",
+      "at": "2026-06-11T09:19:02+00:00"
+    },
+    {
+      "sha": "36627a0",
+      "parents": [
+        "99cec64"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(billing): prevent overcharge when balance < rate on final tick",
+      "at": "2026-06-11T09:13:22+00:00"
+    },
+    {
+      "sha": "99cec64",
+      "parents": [
+        "11536d5"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(docker): add CA certificates to backend scratch image for Stripe TLS",
+      "at": "2026-06-11T09:08:31+00:00"
+    },
+    {
+      "sha": "11536d5",
+      "parents": [
+        "8938947"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(web): don't show success feedback when session rating API call fails",
+      "at": "2026-06-11T09:07:03+00:00"
+    },
+    {
+      "sha": "8938947",
+      "parents": [
+        "c707758"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(ratelimit): strip port from RemoteAddr so per-IP buckets work correctly",
+      "at": "2026-06-11T09:03:59+00:00"
+    },
+    {
+      "sha": "c707758",
+      "parents": [
+        "8309e25"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "perf: eliminate N+1 queries and add partial indexes for hot paths",
+      "at": "2026-06-11T09:01:35+00:00"
+    },
+    {
+      "sha": "8309e25",
+      "parents": [
+        "26b2364"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(startup): reset all hosts to offline on backend restart",
+      "at": "2026-06-11T08:55:28+00:00"
+    },
+    {
+      "sha": "26b2364",
+      "parents": [
+        "49fdb3f"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(security): max request body size 1MB via MaxBytesReader",
+      "at": "2026-06-11T08:54:17+00:00"
+    },
+    {
+      "sha": "49fdb3f",
+      "parents": [
+        "faf0660"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(ci): use golang:1.22 (Debian) for race-detector tests",
+      "at": "2026-06-11T08:52:46+00:00"
+    },
+    {
+      "sha": "faf0660",
+      "parents": [
+        "1387336"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "refactor(api): remove unused hosts.list and hosts.get from client",
+      "at": "2026-06-11T08:51:49+00:00"
+    },
+    {
+      "sha": "1387336",
+      "parents": [
+        "cf424b8"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(billing): deduplicate low-balance warnings with sync.Map",
+      "at": "2026-06-11T08:43:19+00:00"
+    },
+    {
+      "sha": "cf424b8",
+      "parents": [
+        "9ca45b7"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "refactor: typed PgError duplicate check, remove dead auth.ts exports",
+      "at": "2026-06-11T08:42:19+00:00"
+    },
+    {
+      "sha": "9ca45b7",
+      "parents": [
+        "0327a23"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(auth): prevent open redirect via ?return= parameter",
+      "at": "2026-06-11T08:40:30+00:00"
+    },
+    {
+      "sha": "0327a23",
+      "parents": [
+        "40dc7a5"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(ratelimit): use r.RemoteAddr after chi RealIP normalizes it",
+      "at": "2026-06-11T08:39:27+00:00"
+    },
+    {
+      "sha": "40dc7a5",
+      "parents": [
+        "b6c07ff"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(infra): hub stop channel, InputCapture listener cleanup",
+      "at": "2026-06-11T08:38:27+00:00"
+    },
+    {
+      "sha": "b6c07ff",
+      "parents": [
+        "943cbfa"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(sessions): eliminate RateSession TOCTOU race with WHERE rating IS NULL guard",
+      "at": "2026-06-11T08:35:32+00:00"
+    },
+    {
+      "sha": "943cbfa",
+      "parents": [
+        "bd74667"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(security): security headers, WS origin restriction, store payment_intent_id",
+      "at": "2026-06-11T08:33:10+00:00"
+    },
+    {
+      "sha": "bd74667",
+      "parents": [
+        "9c4941a"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(sessions): SELECT FOR UPDATE prevents double-booking race in CreateSession",
+      "at": "2026-06-11T08:20:59+00:00"
+    },
+    {
+      "sha": "9c4941a",
+      "parents": [
+        "f94b0ef"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "fix(web): Suspense boundary around FilterBar for useSearchParams",
       "at": "2026-06-11T08:13:56+00:00"
@@ -350,456 +847,6 @@
       "author": "ToniBirat7",
       "subject": "feat(web): add mouse wheel and gamepad input to InputCapture",
       "at": "2026-06-11T07:38:59+00:00"
-    },
-    {
-      "sha": "e71ec7d",
-      "parents": [
-        "98c9dda"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(web): add pagination to marketplace host grid",
-      "at": "2026-06-11T07:38:17+00:00"
-    },
-    {
-      "sha": "98c9dda",
-      "parents": [
-        "d6e54da"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(web): show reason-specific messages on session end",
-      "at": "2026-06-11T07:37:41+00:00"
-    },
-    {
-      "sha": "d6e54da",
-      "parents": [
-        "57c3a07"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "test(api): add tests for wallet topup and agent pending session discovery",
-      "at": "2026-06-11T07:37:00+00:00"
-    },
-    {
-      "sha": "57c3a07",
-      "parents": [
-        "99a87e9"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix(api): correct total count in ListHosts pagination",
-      "at": "2026-06-11T07:35:53+00:00"
-    },
-    {
-      "sha": "99a87e9",
-      "parents": [
-        "04c3dd4"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(api): add GET /v1/sessions/pending for host agent session discovery",
-      "at": "2026-06-11T07:34:31+00:00"
-    },
-    {
-      "sha": "04c3dd4",
-      "parents": [
-        "3506e8a"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix(api): add input validation to RegisterHost",
-      "at": "2026-06-11T07:33:19+00:00"
-    },
-    {
-      "sha": "3506e8a",
-      "parents": [
-        "7362cfb"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix(signaling): relay WebRTC messages to opposite participant only",
-      "at": "2026-06-11T07:32:31+00:00"
-    },
-    {
-      "sha": "7362cfb",
-      "parents": [
-        "1914674"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(api+web): include host display name in session list",
-      "at": "2026-06-11T07:31:17+00:00"
-    },
-    {
-      "sha": "1914674",
-      "parents": [
-        "da7f74c"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "test(billing): add sweep test for stale AUTHORIZED→FAILED transition",
-      "at": "2026-06-11T07:29:38+00:00"
-    },
-    {
-      "sha": "da7f74c",
-      "parents": [
-        "cca08e6"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix(api): heartbeat keeps host online + correct Stripe redirect URL",
-      "at": "2026-06-11T07:28:20+00:00"
-    },
-    {
-      "sha": "cca08e6",
-      "parents": [
-        "0cf8a82"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(web): payment-confirmed banner on session loading screen",
-      "at": "2026-06-11T07:27:07+00:00"
-    },
-    {
-      "sha": "0cf8a82",
-      "parents": [
-        "bef13b0"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(api): per-user rate limits on session creation and wallet topup",
-      "at": "2026-06-11T07:26:15+00:00"
-    },
-    {
-      "sha": "bef13b0",
-      "parents": [
-        "42491c4"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix(billing): add AUTHORIZED→FAILED sweep + host double-booking guard",
-      "at": "2026-06-11T07:20:32+00:00"
-    },
-    {
-      "sha": "42491c4",
-      "parents": [
-        "766d9a9"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "chore: update dev.sh to include web-dev service URLs and log commands",
-      "at": "2026-06-11T07:17:32+00:00"
-    },
-    {
-      "sha": "766d9a9",
-      "parents": [
-        "4f990d2"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "ci: add TypeScript type-check job for shared + web packages",
-      "at": "2026-06-11T07:17:04+00:00"
-    },
-    {
-      "sha": "4f990d2",
-      "parents": [
-        "f627322"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix: shared package — add tsconfig files, align InputEventSchema with compact wire format",
-      "at": "2026-06-11T07:16:43+00:00"
-    },
-    {
-      "sha": "f627322",
-      "parents": [
-        "cbc8037"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "chore(pulse): update .pulse/ project state",
-      "at": "2026-06-11T07:13:17+00:00"
-    },
-    {
-      "sha": "cbc8037",
-      "parents": [
-        "b2f7814"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "docs: update .env.example — FRONTEND_BASE_URL, NEXT_PUBLIC_TURN_* vars",
-      "at": "2026-06-11T07:13:09+00:00"
-    },
-    {
-      "sha": "b2f7814",
-      "parents": [
-        "9e91416"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "test: add Sweep() public method, sweep abandoned-session and double-booking tests",
-      "at": "2026-06-11T07:11:58+00:00"
-    },
-    {
-      "sha": "9e91416",
-      "parents": [
-        "fe26c69"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: functional marketplace filters — VRAM, price, online-only",
-      "at": "2026-06-11T07:10:01+00:00"
-    },
-    {
-      "sha": "fe26c69",
-      "parents": [
-        "c28574c"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: host dashboard — Stripe Connect button and stripe=success notice",
-      "at": "2026-06-11T07:08:09+00:00"
-    },
-    {
-      "sha": "c28574c",
-      "parents": [
-        "fc22cc5"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: wallet top-up, Stripe Connect host onboarding, dashboard top-up UI",
-      "at": "2026-06-11T07:07:05+00:00"
-    },
-    {
-      "sha": "fc22cc5",
-      "parents": [
-        "10e7ff1"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: Stripe Connect payouts, TURN config, web-dev service, session lifecycle hardening",
-      "at": "2026-06-11T07:01:11+00:00"
-    },
-    {
-      "sha": "10e7ff1",
-      "parents": [
-        "a361c81"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix: handle ?payment=cancelled redirect from Stripe Checkout",
-      "at": "2026-06-11T06:53:53+00:00"
-    },
-    {
-      "sha": "a361c81",
-      "parents": [
-        "dcedd54"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "chore: fix reset-db.sh and Makefile for Docker-only workflow",
-      "at": "2026-06-11T06:53:08+00:00"
-    },
-    {
-      "sha": "dcedd54",
-      "parents": [
-        "1f0d6f4"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "refactor: align shared types/schemas with Go API contract",
-      "at": "2026-06-11T06:52:06+00:00"
-    },
-    {
-      "sha": "1f0d6f4",
-      "parents": [
-        "5515d7b"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "security: in-memory rate limiting for auth endpoints",
-      "at": "2026-06-11T06:50:12+00:00"
-    },
-    {
-      "sha": "5515d7b",
-      "parents": [
-        "d8facce"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: complete Tauri client scaffold with Vite entry points",
-      "at": "2026-06-11T06:49:08+00:00"
-    },
-    {
-      "sha": "d8facce",
-      "parents": [
-        "ecd09d0"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix: complete Tailwind brand palette, register AgentState in Tauri",
-      "at": "2026-06-11T06:45:25+00:00"
-    },
-    {
-      "sha": "ecd09d0",
-      "parents": [
-        "842acf7"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: CORS middleware, host session counter, sweep improvements",
-      "at": "2026-06-11T06:43:43+00:00"
-    },
-    {
-      "sha": "842acf7",
-      "parents": [
-        "441b2f3"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "security: JWT auth gate on WebRTC signaling endpoint",
-      "at": "2026-06-11T06:41:58+00:00"
-    },
-    {
-      "sha": "441b2f3",
-      "parents": [
-        "542c2ee"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "fix: wallet credit on payment, host lifecycle, session sweep",
-      "at": "2026-06-11T06:38:37+00:00"
-    },
-    {
-      "sha": "542c2ee",
-      "parents": [
-        "d7213bd"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: payment failure handler, Stripe PaymentIntent metadata, StreamViewer input capture",
-      "at": "2026-06-11T06:30:53+00:00"
-    },
-    {
-      "sha": "d7213bd",
-      "parents": [
-        "975425f"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: session viewer + dashboards + user/session list endpoints",
-      "at": "2026-06-11T06:25:48+00:00"
-    },
-    {
-      "sha": "975425f",
-      "parents": [
-        "8129ef6"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "chore(pulse): sync project state — billing+web MVPs complete",
-      "at": "2026-06-11T06:18:33+00:00"
-    },
-    {
-      "sha": "8129ef6",
-      "parents": [
-        "12f9af3"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(web): implement auth pages, real HostGrid, host detail + booking",
-      "at": "2026-06-11T06:17:44+00:00"
-    },
-    {
-      "sha": "12f9af3",
-      "parents": [
-        "99af320"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(backend): wire billing engine + Stripe checkout + integration tests",
-      "at": "2026-06-11T06:13:18+00:00"
-    },
-    {
-      "sha": "99af320",
-      "parents": [
-        "0b37d8d"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat(backend): implement auth, hosts, sessions, signaling, migrations",
-      "at": "2026-06-11T05:55:50+00:00"
-    },
-    {
-      "sha": "0b37d8d",
-      "parents": [
-        "d675eec"
-      ],
-      "refs": [
-        "tag:v0.0.1"
-      ],
-      "author": "ToniBirat7",
-      "subject": "fix: web Docker build — pnpm-workspace.yaml, next.config.mjs, public dir",
-      "at": "2026-06-11T05:39:53+00:00"
-    },
-    {
-      "sha": "d675eec",
-      "parents": [
-        "40a9773"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: full dockerization — lockfiles, Dockerfiles, CI, dev workflow",
-      "at": "2026-06-11T05:35:22+00:00"
-    },
-    {
-      "sha": "40a9773",
-      "parents": [
-        "ef0be92"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "ci: remove CI/CD workflows",
-      "at": "2026-06-11T05:23:46+00:00"
-    },
-    {
-      "sha": "ef0be92",
-      "parents": [
-        "7374540"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "chore(pulse): commit tracked .pulse/ project state",
-      "at": "2026-06-10T18:15:08+00:00"
-    },
-    {
-      "sha": "7374540",
-      "parents": [
-        "70530e0"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "chore(pulse): track .pulse/ project state",
-      "at": "2026-06-10T09:31:40+00:00"
-    },
-    {
-      "sha": "70530e0",
-      "parents": [
-        "63e9677"
-      ],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "feat: complete scaffold — agent C++, client Tauri v2, shared types, scripts",
-      "at": "2026-05-15T05:06:24+00:00"
-    },
-    {
-      "sha": "63e9677",
-      "parents": [],
-      "refs": [],
-      "author": "ToniBirat7",
-      "subject": "init",
-      "at": "2026-05-14T09:47:30+00:00"
     }
   ]
 }

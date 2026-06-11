@@ -210,6 +210,66 @@
       "createdAt": "2026-06-11T07:12:38.222634+00:00",
       "updatedAt": "2026-06-11T07:12:38.222635+00:00",
       "note": null
+    },
+    {
+      "id": "m:implement-nvenc-encoder-in-poc-01-c-requires-win",
+      "title": "Implement NVENC encoder in poc/01 C++ (requires Windows + NVENC SDK)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T10:56:50.344450+00:00",
+      "updatedAt": "2026-06-11T10:56:50.344464+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-gstreamer-webrtc-streamer-in-poc-02-c-",
+      "title": "Implement GStreamer WebRTC streamer in poc/02 C++ (requires Windows)",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T10:56:50.344482+00:00",
+      "updatedAt": "2026-06-11T10:56:50.344485+00:00",
+      "note": null
+    },
+    {
+      "id": "m:implement-tauri-host-agent-client-ui",
+      "title": "Implement Tauri host agent client UI",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T10:56:50.344495+00:00",
+      "updatedAt": "2026-06-11T10:56:50.344497+00:00",
+      "note": null
+    },
+    {
+      "id": "m:wire-next-public-turn-env-vars-into-streamviewer",
+      "title": "Wire NEXT_PUBLIC_TURN_* env vars into StreamViewer buildIceServers()",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T10:56:50.344506+00:00",
+      "updatedAt": "2026-06-11T10:56:50.344507+00:00",
+      "note": null
+    },
+    {
+      "id": "m:add-database-connection-pool-metrics-to-health-e",
+      "title": "Add database connection pool metrics to /health endpoint",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T10:56:50.344515+00:00",
+      "updatedAt": "2026-06-11T10:56:50.344517+00:00",
+      "note": null
+    },
+    {
+      "id": "m:write-connectstripeaccount-integration-test",
+      "title": "Write ConnectStripeAccount integration test",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T10:56:50.344522+00:00",
+      "updatedAt": "2026-06-11T10:56:50.344524+00:00",
+      "note": null
     }
   ]
 }
