@@ -51,8 +51,10 @@ func newTestDeps(t *testing.T) *testDeps {
 
 	hub := signaling.NewHub()
 	go hub.Run()
+	t.Cleanup(hub.Stop)
 
 	eng := billing.NewEngine(pool, rdb, hub, time.Minute, 5, "", 20)
+	t.Cleanup(eng.Stop)
 
 	router := api.NewRouter(api.RouterDeps{
 		Pool:    pool,
