@@ -62,6 +62,16 @@ func main() {
 	defer rdb.Close()
 	slog.Info("redis connected")
 
+	// ─── Startup reset ───────────────────────────────────────────────────────
+	// Mark all hosts offline so agents must re-send heartbeats after a backend
+	// restart. Without this, stale online=true persists until the 3-minute
+	// heartbeat sweep, creating a window where unavailable hosts appear bookable.
+	if _, err := pool.Exec(ctx, `UPDATE hosts SET online = false, updated_at = NOW() WHERE online = true`); err != nil {
+		slog.Warn("startup: failed to reset online hosts", "error", err)
+	} else {
+		slog.Info("startup: all hosts marked offline (agents will re-register)")
+	}
+
 	// ─── Services ────────────────────────────────────────────────────────────
 	hub := signaling.NewHub()
 	go hub.Run()
