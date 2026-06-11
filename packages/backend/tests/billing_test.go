@@ -151,3 +151,50 @@ func TestBillingTransactionAtomicity(t *testing.T) {
 			newBalance, balance-rate, totalCharged, rate, tickCount)
 	}
 }
+
+// TestSweepAbandonedCreatedToFailed verifies sessions in CREATED state older than
+// 30 minutes are transitioned to FAILED by the billing sweep.
+func TestSweepAbandonedCreatedToFailed(t *testing.T) {
+	d := newTestDeps(t)
+	ctx := context.Background()
+
+	email := "billing_sweep_abandoned@indranet.test"
+	var userID string
+	if err := d.pool.QueryRow(ctx,
+		`INSERT INTO users (email, password_hash, name) VALUES ($1, 'h', 'S') RETURNING id`, email,
+	).Scan(&userID); err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	var hostID string
+	if err := d.pool.QueryRow(ctx, `
+		INSERT INTO hosts (user_id, display_name, gpu_model, vram_gb, cpu_model,
+		                   ram_gb, os, price_per_hour_cents)
+		VALUES ($1, 'H', 'RTX', 8, 'CPU', 16, 'Win', 600) RETURNING id`, userID,
+	).Scan(&hostID); err != nil {
+		t.Fatalf("create host: %v", err)
+	}
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	// Insert a CREATED session with created_at well in the past (>30 min ago)
+	var sessionID string
+	if err := d.pool.QueryRow(ctx, `
+		INSERT INTO sessions (user_id, host_id, state, rate_per_minute_cents, pre_auth_minutes, created_at, updated_at)
+		VALUES ($1, $2, 'CREATED', 10, 15, NOW() - INTERVAL '31 minutes', NOW() - INTERVAL '31 minutes')
+		RETURNING id`, userID, hostID,
+	).Scan(&sessionID); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+
+	d.engine.Sweep()
+
+	var state string
+	if err := d.pool.QueryRow(ctx, `SELECT state FROM sessions WHERE id = $1`, sessionID).Scan(&state); err != nil {
+		t.Fatalf("fetch state: %v", err)
+	}
+	if state != "FAILED" {
+		t.Errorf("expected FAILED for abandoned CREATED session, got %q", state)
+	}
+}
+

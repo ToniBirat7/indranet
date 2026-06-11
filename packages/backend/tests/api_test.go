@@ -218,3 +218,64 @@ func TestSignalRejectsUnauthenticated(t *testing.T) {
 		t.Errorf("expected 401 with invalid token, got %d", w2.Code)
 	}
 }
+
+// TestConcurrentSessionGuardBlocksDoubleBooking verifies that a second POST /v1/sessions
+// targeting the same host returns 409 when that host already has an AUTHORIZED session.
+func TestConcurrentSessionGuardBlocksDoubleBooking(t *testing.T) {
+	d := newTestDeps(t)
+
+	if d.cfg.StripeSecretKey != "" {
+		t.Skip("skipping dev-mode test: STRIPE_SECRET_KEY is set")
+	}
+
+	email := "test_concurrent@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "password123", "name": "Concurrent Test",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var regResp map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&regResp)
+	token := regResp["token"].(string)
+	userID := regResp["user_id"].(string)
+
+	var hostID string
+	if err := d.pool.QueryRow(context.Background(), `
+		INSERT INTO hosts (user_id, display_name, gpu_model, vram_gb, cpu_model,
+		                   ram_gb, os, price_per_hour_cents, online)
+		VALUES ($1, 'H', 'RTX 4090', 24, 'CPU', 32, 'Windows 11', 600, true) RETURNING id`,
+		userID,
+	).Scan(&hostID); err != nil {
+		t.Fatalf("create host: %v", err)
+	}
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	sessBody, _ := json.Marshal(map[string]interface{}{"host_id": hostID, "duration_minutes": 15})
+
+	// First booking — should succeed
+	req1 := httptest.NewRequest(http.MethodPost, "/v1/sessions", bytes.NewReader(sessBody))
+	req1.Header.Set("Content-Type", "application/json")
+	req1.Header.Set("Authorization", "Bearer "+token)
+	w1 := httptest.NewRecorder()
+	d.router.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusCreated {
+		t.Fatalf("first session: expected 201, got %d: %s", w1.Code, w1.Body.String())
+	}
+
+	// Second booking against the same host — must return 409
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/sessions", bytes.NewReader(sessBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusConflict {
+		t.Errorf("double booking: expected 409, got %d: %s", w2.Code, w2.Body.String())
+	}
+}

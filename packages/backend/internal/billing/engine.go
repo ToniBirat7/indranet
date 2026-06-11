@@ -84,6 +84,11 @@ func (e *Engine) Tick() {
 	e.tick()
 }
 
+// Sweep runs one maintenance sweep immediately. Used in integration tests.
+func (e *Engine) Sweep() {
+	e.sweep()
+}
+
 type activeSession struct {
 	SessionID          string
 	UserID             string
