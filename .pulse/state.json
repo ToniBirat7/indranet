@@ -62,9 +62,9 @@
     "remoteUrl": "github.com/ToniBirat7/indranet",
     "githubSlug": "ToniBirat7/indranet",
     "lastCommit": {
-      "sha": "7d9151e",
-      "subject": "fix(api,web): input validation + StreamViewer bugs + FilterBar clear",
-      "authoredAt": "2026-06-11T07:55:13+00:00",
+      "sha": "9c4941a",
+      "subject": "fix(web): Suspense boundary around FilterBar for useSearchParams",
+      "authoredAt": "2026-06-11T08:13:56+00:00",
       "ageDays": 0.0
     },
     "dirty": true,
@@ -75,7 +75,7 @@
   "branches": [
     {
       "name": "main",
-      "lastCommitAt": "2026-06-11T07:55:13+00:00",
+      "lastCommitAt": "2026-06-11T08:13:56+00:00",
       "ageDays": 0.0,
       "isCurrent": true,
       "merged": false,
@@ -130,8 +130,8 @@
     "doneTasks": 1,
     "openPrs": 0,
     "staleBranches": 0,
-    "commitsLast7d": 47,
-    "commitsLast30d": 49,
+    "commitsLast7d": 54,
+    "commitsLast30d": 56,
     "progress": 26,
     "activityDaily": [
       0,
@@ -223,30 +223,100 @@
       0,
       0,
       2,
-      45
+      52
     ],
     "activityFrom": "2026-03-14",
-    "activityTotal90d": 49,
+    "activityTotal90d": 56,
     "contributors": [
       {
         "name": "ToniBirat7",
-        "commits": 49
+        "commits": 56
       }
     ]
   },
-  "generatedAt": "2026-06-11T07:57:12.498890+00:00",
+  "generatedAt": "2026-06-11T08:20:08.272636+00:00",
   "generatedBy": "pulse-autosync@0.1.0",
   "commitGraph": [
     {
-      "sha": "7d9151e",
+      "sha": "9c4941a",
       "parents": [
-        "b9fe64e"
+        "f94b0ef"
       ],
       "refs": [
         "main",
         "origin/main",
         "origin/HEAD"
       ],
+      "author": "ToniBirat7",
+      "subject": "fix(web): Suspense boundary around FilterBar for useSearchParams",
+      "at": "2026-06-11T08:13:56+00:00"
+    },
+    {
+      "sha": "f94b0ef",
+      "parents": [
+        "74d50ee"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): sort ListHosts online first, then by rating, then by price",
+      "at": "2026-06-11T08:05:56+00:00"
+    },
+    {
+      "sha": "74d50ee",
+      "parents": [
+        "4dc48de"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "test(api): TestRateSession — rating, host aggregate update, double-rate 409",
+      "at": "2026-06-11T08:04:20+00:00"
+    },
+    {
+      "sha": "4dc48de",
+      "parents": [
+        "91a41e8"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat(web): dashboard load-more sessions + api-spec rating endpoint",
+      "at": "2026-06-11T08:03:13+00:00"
+    },
+    {
+      "sha": "91a41e8",
+      "parents": [
+        "d09737d"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "feat: session rating (1–5 stars) + register password maxLength",
+      "at": "2026-06-11T08:02:19+00:00"
+    },
+    {
+      "sha": "d09737d",
+      "parents": [
+        "703d1f2"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "fix(api): input validation bounds — password, topup, session duration",
+      "at": "2026-06-11T07:59:21+00:00"
+    },
+    {
+      "sha": "703d1f2",
+      "parents": [
+        "7d9151e"
+      ],
+      "refs": [],
+      "author": "ToniBirat7",
+      "subject": "refactor(web): route group (main) — fullscreen session layout",
+      "at": "2026-06-11T07:58:09+00:00"
+    },
+    {
+      "sha": "7d9151e",
+      "parents": [
+        "b9fe64e"
+      ],
+      "refs": [],
       "author": "ToniBirat7",
       "subject": "fix(api,web): input validation + StreamViewer bugs + FilterBar clear",
       "at": "2026-06-11T07:55:13+00:00"

@@ -58,3 +58,10 @@
 {"id": "commit:99a87e9", "type": "commit", "at": "2026-06-11T07:34:31+00:00", "summary": "feat(api): add GET /v1/sessions/pending for host agent session discovery"}
 {"id": "commit:b9fe64e", "type": "commit", "at": "2026-06-11T07:50:09+00:00", "summary": "fix(api): rate limiter goroutine leak + ListSessions pagination"}
 {"id": "commit:7d9151e", "type": "commit", "at": "2026-06-11T07:55:13+00:00", "summary": "fix(api,web): input validation + StreamViewer bugs + FilterBar clear"}
+{"id": "commit:703d1f2", "type": "commit", "at": "2026-06-11T07:58:09+00:00", "summary": "refactor(web): route group (main) — fullscreen session layout"}
+{"id": "commit:d09737d", "type": "commit", "at": "2026-06-11T07:59:21+00:00", "summary": "fix(api): input validation bounds — password, topup, session duration"}
+{"id": "commit:91a41e8", "type": "commit", "at": "2026-06-11T08:02:19+00:00", "summary": "feat: session rating (1–5 stars) + register password maxLength"}
+{"id": "commit:4dc48de", "type": "commit", "at": "2026-06-11T08:03:13+00:00", "summary": "feat(web): dashboard load-more sessions + api-spec rating endpoint"}
+{"id": "commit:74d50ee", "type": "commit", "at": "2026-06-11T08:04:20+00:00", "summary": "test(api): TestRateSession — rating, host aggregate update, double-rate 409"}
+{"id": "commit:f94b0ef", "type": "commit", "at": "2026-06-11T08:05:56+00:00", "summary": "fix(api): sort ListHosts online first, then by rating, then by price"}
+{"id": "commit:9c4941a", "type": "commit", "at": "2026-06-11T08:13:56+00:00", "summary": "fix(web): Suspense boundary around FilterBar for useSearchParams"}

@@ -46,10 +46,20 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Lock host row for the duration of this transaction to prevent double-booking.
+	// SELECT FOR UPDATE on the host prevents concurrent CreateSession requests from
+	// racing between the availability check and the INSERT.
+	tx, err := h.deps.Pool.Begin(r.Context())
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(r.Context()) //nolint:errcheck
+
 	var pricePerHourCents int64
 	var online bool
-	err := h.deps.Pool.QueryRow(r.Context(),
-		`SELECT price_per_hour_cents, online FROM hosts WHERE id = $1`,
+	err = tx.QueryRow(r.Context(),
+		`SELECT price_per_hour_cents, online FROM hosts WHERE id = $1 FOR UPDATE`,
 		req.HostID,
 	).Scan(&pricePerHourCents, &online)
 	if err != nil {
@@ -65,9 +75,8 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check the host doesn't already have an active or pending session.
 	var activeCount int
-	if err := h.deps.Pool.QueryRow(r.Context(), `
+	if err := tx.QueryRow(r.Context(), `
 		SELECT COUNT(*) FROM sessions
 		WHERE host_id = $1 AND state IN ('AUTHORIZED', 'ACTIVE')
 	`, req.HostID).Scan(&activeCount); err != nil {
@@ -82,13 +91,18 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 	ratePerMinuteCents := pricePerHourCents / 60
 
 	var sessionID string
-	err = h.deps.Pool.QueryRow(r.Context(), `
+	err = tx.QueryRow(r.Context(), `
 		INSERT INTO sessions (user_id, host_id, state, rate_per_minute_cents, pre_auth_minutes)
 		VALUES ($1, $2, 'CREATED', $3, $4)
 		RETURNING id
 	`, userID, req.HostID, ratePerMinuteCents, req.DurationMinutes,
 	).Scan(&sessionID)
 	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
