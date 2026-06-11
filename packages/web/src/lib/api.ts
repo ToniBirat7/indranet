@@ -29,6 +29,7 @@ export interface UserProfile {
 export interface SessionSummary {
   session_id: string
   host_id: string
+  host_name: string
   state: string
   rate_per_minute_cents: number
   total_charged_cents: number

@@ -305,11 +305,12 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value(ctxKeyUserID).(string)
 
 	rows, err := h.deps.Pool.Query(r.Context(), `
-		SELECT id, host_id, state, rate_per_minute_cents, total_charged_cents,
-		       started_at, created_at
-		FROM sessions
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		SELECT s.id, s.host_id, h.display_name, s.state, s.rate_per_minute_cents,
+		       s.total_charged_cents, s.started_at, s.created_at
+		FROM sessions s
+		JOIN hosts h ON h.id = s.host_id
+		WHERE s.user_id = $1
+		ORDER BY s.created_at DESC
 		LIMIT 20
 	`, userID)
 	if err != nil {
@@ -319,20 +320,21 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type sessionSummary struct {
-		ID                 string             `json:"session_id"`
-		HostID             string             `json:"host_id"`
+		ID                 string              `json:"session_id"`
+		HostID             string              `json:"host_id"`
+		HostName           string              `json:"host_name"`
 		State              models.SessionState `json:"state"`
-		RatePerMinuteCents int64              `json:"rate_per_minute_cents"`
-		TotalChargedCents  int64              `json:"total_charged_cents"`
-		StartedAt          interface{}        `json:"started_at"`
-		CreatedAt          interface{}        `json:"created_at"`
+		RatePerMinuteCents int64               `json:"rate_per_minute_cents"`
+		TotalChargedCents  int64               `json:"total_charged_cents"`
+		StartedAt          interface{}         `json:"started_at"`
+		CreatedAt          interface{}         `json:"created_at"`
 	}
 
 	var sessions []sessionSummary
 	for rows.Next() {
 		var s sessionSummary
 		if err := rows.Scan(
-			&s.ID, &s.HostID, &s.State, &s.RatePerMinuteCents,
+			&s.ID, &s.HostID, &s.HostName, &s.State, &s.RatePerMinuteCents,
 			&s.TotalChargedCents, &s.StartedAt, &s.CreatedAt,
 		); err != nil {
 			http.Error(w, "internal server error", http.StatusInternalServerError)

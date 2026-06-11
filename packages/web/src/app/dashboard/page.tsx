@@ -154,10 +154,14 @@ export default function DashboardPage() {
                 className="bg-gray-900 rounded-lg px-4 py-3 flex items-center justify-between"
               >
                 <div>
-                  <span className={`text-xs font-medium ${STATE_COLORS[s.state] ?? 'text-gray-400'}`}>
-                    {s.state}
-                  </span>
-                  <p className="text-gray-400 text-xs mt-0.5">{date}</p>
+                  <p className="text-white text-sm font-medium">{s.host_name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-xs font-medium ${STATE_COLORS[s.state] ?? 'text-gray-400'}`}>
+                      {s.state}
+                    </span>
+                    <span className="text-gray-600 text-xs">·</span>
+                    <span className="text-gray-500 text-xs">{date}</span>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-white text-sm">${cost}</p>
