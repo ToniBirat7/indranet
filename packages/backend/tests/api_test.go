@@ -859,7 +859,7 @@ func TestListHostsAndGetHost(t *testing.T) {
 	found := false
 	for _, h := range hosts {
 		hm := h.(map[string]interface{})
-		if hm["id"] == hostID {
+		if hm["host_id"] == hostID {
 			found = true
 			if hm["display_name"] != "ListTest Host" {
 				t.Errorf("expected display_name=ListTest Host, got %v", hm["display_name"])
@@ -879,8 +879,8 @@ func TestListHostsAndGetHost(t *testing.T) {
 	}
 	var getResp map[string]interface{}
 	json.NewDecoder(w4.Body).Decode(&getResp)
-	if getResp["id"] != hostID {
-		t.Errorf("get host: expected id=%q, got %q", hostID, getResp["id"])
+	if getResp["host_id"] != hostID {
+		t.Errorf("get host: expected host_id=%q, got %q", hostID, getResp["host_id"])
 	}
 	if getResp["gpu_model"] != "RTX 4080" {
 		t.Errorf("get host: expected gpu_model=RTX 4080, got %v", getResp["gpu_model"])
