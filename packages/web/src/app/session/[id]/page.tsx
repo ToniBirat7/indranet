@@ -212,7 +212,12 @@ export default function SessionPage({ params }: { params: { id: string } }) {
         <button
           onClick={async () => {
             const token = getToken()
-            if (token) await api.sessions.end(params.id, token).catch(() => {})
+            if (!token) return
+            try {
+              await api.sessions.end(params.id, token)
+            } catch (e) {
+              console.error('End session failed', e)
+            }
             setEnded(true)
           }}
           className="text-gray-500 hover:text-red-400 text-sm transition-colors"

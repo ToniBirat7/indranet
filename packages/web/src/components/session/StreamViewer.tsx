@@ -89,14 +89,23 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
 
       switch (msg.type) {
         case 'offer': {
-          await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp as string })
-          const answer = await pc.createAnswer()
-          await pc.setLocalDescription(answer)
-          ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }))
+          try {
+            await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp as string })
+            const answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+            ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }))
+          } catch (e) {
+            console.error('WebRTC SDP negotiation failed', e)
+            setError('Stream negotiation failed')
+            setState('error')
+          }
           break
         }
         case 'ice_candidate':
-          if (msg.candidate) await pc.addIceCandidate(new RTCIceCandidate(msg.candidate as RTCIceCandidateInit))
+          if (msg.candidate) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(msg.candidate as RTCIceCandidateInit)) }
+            catch (e) { console.warn('addIceCandidate failed', e) }
+          }
           break
         case 'session_kill':
         case 'session_failed':
