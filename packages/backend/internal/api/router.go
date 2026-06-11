@@ -86,7 +86,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 
 			// User profile and wallet
 			r.Get("/users/me", h.GetMe)
-			r.Post("/users/me/topup", h.TopUpWallet)
+			r.With(h.topupRateLimitMiddleware).Post("/users/me/topup", h.TopUpWallet)
 
 			// Host management
 			r.Post("/hosts/register", h.RegisterHost)
@@ -94,7 +94,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 
 			// Sessions
 			r.Get("/sessions", h.ListSessions)
-			r.Post("/sessions", h.CreateSession)
+			r.With(h.sessionCreateRateLimitMiddleware).Post("/sessions", h.CreateSession)
 			r.Get("/sessions/{id}", h.GetSession)
 			r.Delete("/sessions/{id}", h.EndSession)
 		})
