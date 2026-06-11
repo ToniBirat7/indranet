@@ -146,19 +146,26 @@ func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID strin
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	var newBalance int64
+	// Deduct at most the user's current balance to prevent negative balance.
+	// LEAST ensures the final tick never over-charges when balance < rate.
+	var newBalance, actualCharge int64
 	if err := tx.QueryRow(ctx, `
-		UPDATE users SET balance_cents = balance_cents - $1, updated_at = NOW()
+		WITH charge AS (
+			SELECT LEAST(balance_cents, $1::BIGINT) AS amount FROM users WHERE id = $2
+		)
+		UPDATE users
+		SET balance_cents = balance_cents - (SELECT amount FROM charge),
+		    updated_at = NOW()
 		WHERE id = $2
-		RETURNING balance_cents
-	`, ratePerMinuteCents, userID).Scan(&newBalance); err != nil {
+		RETURNING balance_cents, (SELECT amount FROM charge)
+	`, ratePerMinuteCents, userID).Scan(&newBalance, &actualCharge); err != nil {
 		slog.Error("billing: deduct balance failed", "session_id", sessionID, "error", err)
 		return
 	}
 
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO billing_ticks (session_id, amount_cents) VALUES ($1, $2)`,
-		sessionID, ratePerMinuteCents,
+		sessionID, actualCharge,
 	); err != nil {
 		slog.Error("billing: insert tick failed", "session_id", sessionID, "error", err)
 		return
@@ -168,7 +175,7 @@ func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID strin
 		UPDATE sessions
 		SET total_charged_cents = total_charged_cents + $1, updated_at = NOW()
 		WHERE id = $2
-	`, ratePerMinuteCents, sessionID); err != nil {
+	`, actualCharge, sessionID); err != nil {
 		slog.Error("billing: update session total failed", "session_id", sessionID, "error", err)
 		return
 	}
@@ -180,7 +187,7 @@ func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID strin
 
 	slog.Debug("billing tick committed",
 		"session_id", sessionID,
-		"charged_cents", ratePerMinuteCents,
+		"charged_cents", actualCharge,
 		"new_balance_cents", newBalance,
 	)
 
