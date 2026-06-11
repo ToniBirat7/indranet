@@ -14,12 +14,12 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 
 	pgStatus := "ok"
 	if err := h.deps.Pool.Ping(ctx); err != nil {
-		pgStatus = "error: " + err.Error()
+		pgStatus = "unavailable"
 	}
 
 	redisStatus := "ok"
 	if err := h.deps.Redis.Ping(ctx).Err(); err != nil {
-		redisStatus = "error: " + err.Error()
+		redisStatus = "unavailable"
 	}
 
 	status := "ok"

@@ -193,13 +193,14 @@ func (h *Handlers) createStripeCheckout(sessionID string, durationMinutes int, r
 // StartSession transitions a session from AUTHORIZED to ACTIVE.
 // Called by the host agent after the sandbox is ready and streaming has begun.
 func (h *Handlers) StartSession(w http.ResponseWriter, r *http.Request) {
+	hostID, _ := r.Context().Value(ctxKeyUserID).(string)
 	sessionID := chi.URLParam(r, "id")
 
 	tag, err := h.deps.Pool.Exec(r.Context(), `
 		UPDATE sessions
 		SET state = 'ACTIVE', started_at = NOW(), updated_at = NOW()
-		WHERE id = $1 AND state = 'AUTHORIZED'
-	`, sessionID)
+		WHERE id = $1 AND host_id = $2 AND state = 'AUTHORIZED'
+	`, sessionID, hostID)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
@@ -297,11 +298,12 @@ func (h *Handlers) GetSession(w http.ResponseWriter, r *http.Request) {
 // HeartbeatSession handles the host agent's 60-second heartbeat.
 // Returns action: "continue" or "kill".
 func (h *Handlers) HeartbeatSession(w http.ResponseWriter, r *http.Request) {
+	hostID, _ := r.Context().Value(ctxKeyUserID).(string)
 	sessionID := chi.URLParam(r, "id")
 
 	var state models.SessionState
 	err := h.deps.Pool.QueryRow(r.Context(),
-		`SELECT state FROM sessions WHERE id = $1`, sessionID,
+		`SELECT state FROM sessions WHERE id = $1 AND host_id = $2`, sessionID, hostID,
 	).Scan(&state)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

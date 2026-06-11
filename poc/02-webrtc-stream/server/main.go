@@ -68,10 +68,16 @@ func handleSignal(w http.ResponseWriter, r *http.Request) {
 	room.mu.Unlock()
 
 	defer func() {
+		roomsMu.Lock()
 		room.mu.Lock()
 		delete(room.clients, role)
 		log.Printf("[room %s] %s disconnected", roomID, role)
+		if len(room.clients) == 0 {
+			delete(rooms, roomID)
+			log.Printf("[room %s] removed (empty)", roomID)
+		}
 		room.mu.Unlock()
+		roomsMu.Unlock()
 	}()
 
 	for {

@@ -3,8 +3,11 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -31,6 +34,14 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func newSessionID() string {
+	b := make([]byte, 12)
+	if _, err := rand.Read(b); err != nil {
+		log.Fatalf("crypto/rand unavailable: %v", err)
+	}
+	return "ses_" + hex.EncodeToString(b)
 }
 
 type SessionClaims struct {
@@ -98,7 +109,7 @@ func handleCreateCheckout(w http.ResponseWriter, r *http.Request) {
 		CancelURL:  stripe.String(cancelURL),
 		// Metadata carries our internal session ID into the webhook
 		Metadata: map[string]string{
-			"indranet_session_id": fmt.Sprintf("ses_%d", time.Now().UnixMilli()),
+			"indranet_session_id": newSessionID(),
 		},
 	}
 
@@ -193,12 +204,13 @@ func handleVerify(w http.ResponseWriter, r *http.Request) {
 func handleSuccess(w http.ResponseWriter, r *http.Request) {
 	stripeSessionID := r.URL.Query().Get("session_id")
 	log.Printf("User returned from checkout: stripe_session=%s", stripeSessionID)
-	fmt.Fprintln(w, `<!DOCTYPE html><html><body>
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!DOCTYPE html><html><body>
 		<h1>Payment complete!</h1>
 		<p>Your session is being set up. The stream token will appear shortly.</p>
-		<p>Stripe session: `+stripeSessionID+`</p>
+		<p>Stripe session: %s</p>
 		<a href="/">Back</a>
-	</body></html>`)
+	</body></html>`, html.EscapeString(stripeSessionID))
 }
 
 func main() {

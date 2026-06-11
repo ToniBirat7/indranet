@@ -107,6 +107,10 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	if req.Email == "" || req.Password == "" {
+		http.Error(w, "email and password are required", http.StatusBadRequest)
+		return
+	}
 
 	var user models.User
 	err := h.deps.Pool.QueryRow(r.Context(),
@@ -202,8 +206,9 @@ func (h *Handlers) generateAgentJWT(hostID string) (string, error) {
 		UserID: hostID,
 		Role:   "agent",
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:  hostID,
-			IssuedAt: jwt.NewNumericDate(time.Now()),
+			Subject:   hostID,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
