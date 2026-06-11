@@ -29,6 +29,8 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [sessionTotal, setSessionTotal] = useState(0)
+  const [sessionPage, setSessionPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [toppingUp, setToppingUp] = useState(false)
   const [topupNotice, setTopupNotice] = useState<string | null>(
@@ -179,6 +181,26 @@ export default function DashboardPage() {
               </div>
             )
           })}
+          {sessions.length < sessionTotal && (
+            <button
+              onClick={async () => {
+                const token = getToken()
+                if (!token) return
+                setLoadingMore(true)
+                try {
+                  const next = await api.sessions.list(token, { page: sessionPage + 1 })
+                  setSessions((prev) => [...prev, ...next.sessions])
+                  setSessionPage((p) => p + 1)
+                } finally {
+                  setLoadingMore(false)
+                }
+              }}
+              disabled={loadingMore}
+              className="w-full py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading…' : `Load more (${sessionTotal - sessions.length} remaining)`}
+            </button>
+          )}
         </div>
       )}
     </div>

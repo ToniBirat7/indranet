@@ -173,6 +173,15 @@ End a session (user-initiated). Authenticated.
 
 **Response 200:** `{ "state": "ENDING" }`
 
+### POST /sessions/:id/rate
+Submit a 1–5 star rating for a completed session. Authenticated. One rating per session; only callable when `state = ENDED`.
+
+**Request:** `{ "stars": 4 }`
+
+**Response 200:** `{ "stars": 4 }`
+
+**Response 409:** Session already rated.
+
 ### GET /sessions/:id
 Get session status. Authenticated.
 
