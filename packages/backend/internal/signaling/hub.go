@@ -136,11 +136,16 @@ func (h *Hub) relayMessage(msg sessionMessage) {
 
 // SendToSession sends an arbitrary message to all clients in a session.
 // Called by the billing engine to deliver session_warning and session_kill events.
+// Non-blocking: drops the message if the broadcast channel is full (hub stopped or overloaded).
 func (h *Hub) SendToSession(sessionID string, message interface{}) {
 	payload, err := json.Marshal(message)
 	if err != nil {
 		slog.Error("signaling: failed to marshal message", "error", err)
 		return
 	}
-	h.broadcast <- sessionMessage{sessionID: sessionID, payload: payload}
+	select {
+	case h.broadcast <- sessionMessage{sessionID: sessionID, payload: payload}:
+	default:
+		slog.Warn("signaling: broadcast channel full, dropping message", "session_id", sessionID)
+	}
 }
