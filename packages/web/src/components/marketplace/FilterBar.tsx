@@ -60,7 +60,7 @@ export default function FilterBar() {
           Online only
         </label>
       </div>
-      {(searchParams.get('min_vram') || searchParams.get('max_price_cents')) && (
+      {(searchParams.get('min_vram') || searchParams.get('max_price_cents') || searchParams.get('online')) && (
         <div className="flex items-end">
           <button
             onClick={() => router.push(pathname)}

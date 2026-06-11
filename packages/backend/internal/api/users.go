@@ -44,6 +44,14 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "email, password, and name are required", http.StatusBadRequest)
 		return
 	}
+	if !strings.Contains(req.Email, "@") || len(req.Email) > 254 {
+		http.Error(w, "invalid email address", http.StatusBadRequest)
+		return
+	}
+	if len(req.Name) > 80 {
+		http.Error(w, "name must be ≤80 characters", http.StatusBadRequest)
+		return
+	}
 	if len(req.Password) < 8 {
 		http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
 		return

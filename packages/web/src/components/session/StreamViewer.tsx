@@ -43,7 +43,7 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
 
     ws.onopen = () => setupPeerConnection(ws)
     ws.onerror = () => { setError('Failed to connect to signaling server'); setState('error') }
-    ws.onclose = () => setState((prev) => (prev === 'connected' ? 'error' : prev))
+    ws.onclose = () => setState((prev) => (prev === 'connected' || prev === 'connecting' ? 'error' : prev))
   }
 
   function buildIceServers(): RTCIceServer[] {
@@ -119,7 +119,7 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
       <div className="flex items-center justify-center h-full bg-gray-950 text-white">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-4">{error ?? 'Connection error'}</p>
-          <button onClick={connect} className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg">Retry</button>
+          <button onClick={() => { disconnect(); connect() }} className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg">Retry</button>
         </div>
       </div>
     )

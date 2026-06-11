@@ -430,3 +430,70 @@ func TestGetPendingSessionsReturnsAuthorized(t *testing.T) {
 		t.Errorf("session %q not found in pending list", sessionID)
 	}
 }
+
+// TestRegisterRejectsInvalidEmail verifies that registration rejects malformed emails.
+func TestRegisterRejectsInvalidEmail(t *testing.T) {
+	d := newTestDeps(t)
+
+	for _, bad := range []string{"notanemail", "nodotatall"} {
+		body, _ := json.Marshal(map[string]string{
+			"email":    bad,
+			"password": "password123",
+			"name":     "Test",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		d.router.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("email %q: expected 400, got %d", bad, w.Code)
+		}
+	}
+}
+
+// TestListSessionsPagination verifies that GET /sessions returns total/page/limit fields.
+func TestListSessionsPagination(t *testing.T) {
+	d := newTestDeps(t)
+	email := "test_list_sess_pag@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	// Register + login
+	regBody, _ := json.Marshal(map[string]string{"email": email, "password": "password123", "name": "Pager"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var rr map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&rr)
+	token := rr["token"].(string)
+
+	// List sessions (empty)
+	req2 := httptest.NewRequest(http.MethodGet, "/v1/sessions?page=1&limit=10", nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("list sessions: expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var resp map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&resp)
+	if _, ok := resp["total"]; !ok {
+		t.Error("expected 'total' in response")
+	}
+	if _, ok := resp["page"]; !ok {
+		t.Error("expected 'page' in response")
+	}
+	if _, ok := resp["limit"]; !ok {
+		t.Error("expected 'limit' in response")
+	}
+	if resp["sessions"] == nil {
+		t.Error("expected 'sessions' in response")
+	}
+	if strings.Contains(w2.Body.String(), "null") {
+		// sessions should be [] not null
+		t.Error("sessions field should be empty array, not null")
+	}
+}
