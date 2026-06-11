@@ -26,6 +26,9 @@ type Engine struct {
 	platformFeePercent int
 	stopCh             chan struct{}
 	wg                 sync.WaitGroup
+	// warnedSessions tracks sessions that have already received a low-balance
+	// warning so we don't spam the client on every subsequent tick.
+	warnedSessions sync.Map
 }
 
 // HubNotifier is the minimal interface the billing engine needs from the signaling hub.
@@ -182,14 +185,17 @@ func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID strin
 	)
 
 	if newBalance <= 0 {
+		e.warnedSessions.Delete(sessionID) // clean up on kill
 		e.killSession(ctx, sessionID)
 		return
 	}
 
 	warningCents := int64(e.warningMinutes) * ratePerMinuteCents
 	if newBalance < warningCents {
-		minutesRemaining := int(newBalance / ratePerMinuteCents)
-		e.sendWarning(sessionID, minutesRemaining)
+		if _, alreadyWarned := e.warnedSessions.LoadOrStore(sessionID, true); !alreadyWarned {
+			minutesRemaining := int(newBalance / ratePerMinuteCents)
+			e.sendWarning(sessionID, minutesRemaining)
+		}
 	}
 }
 
@@ -266,6 +272,7 @@ func (e *Engine) sweep() {
 		if len(ended) > 0 {
 			slog.Info("billing: swept ENDING→ENDED", "count", len(ended))
 			for _, s := range ended {
+				e.warnedSessions.Delete(s.sessionID)
 				e.transferHostPayout(s)
 			}
 		}
