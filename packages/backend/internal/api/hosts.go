@@ -127,6 +127,56 @@ func (h *Handlers) ListHosts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetHostMe returns the authenticated agent's own host record.
+// Called by the C++ agent on startup to read its configuration.
+func (h *Handlers) GetHostMe(w http.ResponseWriter, r *http.Request) {
+	hostID, _ := r.Context().Value(ctxKeyUserID).(string)
+	if hostID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var host models.Host
+	err := h.deps.Pool.QueryRow(r.Context(), `
+		SELECT id, user_id, display_name, gpu_model, vram_gb, cpu_model, ram_gb,
+		       os, price_per_hour_cents, tags, online, payouts_enabled,
+		       total_sessions, rating_sum, rating_count, created_at
+		FROM hosts WHERE id = $1
+	`, hostID).Scan(
+		&host.ID, &host.UserID, &host.DisplayName, &host.GPUModel, &host.VRAMgb,
+		&host.CPUModel, &host.RAMgb, &host.OS, &host.PricePerHourCents,
+		&host.Tags, &host.Online, &host.PayoutsEnabled,
+		&host.TotalSessions, &host.RatingSum, &host.RatingCount, &host.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "host not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"host_id":                host.ID,
+		"display_name":           host.DisplayName,
+		"gpu_model":              host.GPUModel,
+		"vram_gb":                host.VRAMgb,
+		"cpu_model":              host.CPUModel,
+		"ram_gb":                 host.RAMgb,
+		"os":                     host.OS,
+		"price_per_hour_cents":   host.PricePerHourCents,
+		"price_per_minute_cents": host.PricePerMinuteCents(),
+		"tags":                   host.Tags,
+		"online":                 host.Online,
+		"payouts_enabled":        host.PayoutsEnabled,
+		"rating":                 host.Rating(),
+		"total_sessions":         host.TotalSessions,
+		"created_at":             host.CreatedAt,
+	})
+}
+
 // GetHost returns detailed information about a specific host.
 func (h *Handlers) GetHost(w http.ResponseWriter, r *http.Request) {
 	hostID := chi.URLParam(r, "id")

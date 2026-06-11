@@ -733,3 +733,75 @@ func TestListSessionsPagination(t *testing.T) {
 		t.Error("sessions field should be empty array, not null")
 	}
 }
+
+// TestAgentGetHostMe verifies GET /v1/hosts/me returns the agent's own host record.
+func TestAgentGetHostMe(t *testing.T) {
+	d := newTestDeps(t)
+	email := "test_hostme@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	// Register user
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "password123", "name": "HostMe Test",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var regResp map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&regResp)
+	userToken := regResp["token"].(string)
+
+	// Register host → get agent token
+	hostBody, _ := json.Marshal(map[string]interface{}{
+		"display_name": "MyHost", "gpu_model": "RTX 3080", "vram_gb": 10,
+		"cpu_model": "Ryzen 9", "ram_gb": 32, "os": "Windows 11",
+		"price_per_hour_cents": 600, "tags": []string{"gaming"},
+	})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+userToken)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("register host: %d %s", w2.Code, w2.Body.String())
+	}
+	var hostResp map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&hostResp)
+	agentToken := hostResp["agent_token"].(string)
+	hostID := hostResp["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	// Agent calls GET /v1/hosts/me
+	req3 := httptest.NewRequest(http.MethodGet, "/v1/hosts/me", nil)
+	req3.Header.Set("Authorization", "Bearer "+agentToken)
+	w3 := httptest.NewRecorder()
+	d.router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("GET /v1/hosts/me: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+	var me map[string]interface{}
+	if err := json.NewDecoder(w3.Body).Decode(&me); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if me["host_id"] != hostID {
+		t.Errorf("expected host_id=%q, got %q", hostID, me["host_id"])
+	}
+	if me["gpu_model"] != "RTX 3080" {
+		t.Errorf("expected gpu_model=RTX 3080, got %q", me["gpu_model"])
+	}
+	if me["display_name"] != "MyHost" {
+		t.Errorf("expected display_name=MyHost, got %q", me["display_name"])
+	}
+
+	// Unauthenticated request must be rejected
+	req4 := httptest.NewRequest(http.MethodGet, "/v1/hosts/me", nil)
+	w4 := httptest.NewRecorder()
+	d.router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusUnauthorized {
+		t.Errorf("unauthenticated GET /v1/hosts/me: expected 401, got %d", w4.Code)
+	}
+}
