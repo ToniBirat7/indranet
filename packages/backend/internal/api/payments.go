@@ -153,6 +153,8 @@ func (h *Handlers) handleSessionCheckoutComplete(ctx context.Context, cs stripe.
 }
 
 // handleWalletTopup credits the user's wallet directly from a top-up checkout.
+// Idempotent: inserts the stripe_checkout_id into wallet_topups first; if that
+// key already exists the INSERT is skipped and we return without double-crediting.
 func (h *Handlers) handleWalletTopup(ctx context.Context, cs stripe.CheckoutSession) error {
 	userID := cs.Metadata["user_id"]
 	if userID == "" {
@@ -161,16 +163,41 @@ func (h *Handlers) handleWalletTopup(ctx context.Context, cs stripe.CheckoutSess
 	}
 
 	amountCents := cs.AmountTotal
-	if _, err := h.deps.Pool.Exec(ctx, `
+
+	tx, err := h.deps.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO wallet_topups (stripe_checkout_id, user_id, amount_cents)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (stripe_checkout_id) DO NOTHING
+	`, cs.ID, userID, amountCents)
+	if err != nil {
+		return fmt.Errorf("insert wallet_topup: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		slog.Info("stripe: duplicate wallet_topup webhook ignored", "stripe_session_id", cs.ID)
+		return nil
+	}
+
+	if _, err := tx.Exec(ctx, `
 		UPDATE users SET balance_cents = balance_cents + $1, updated_at = NOW()
 		WHERE id = $2
 	`, amountCents, userID); err != nil {
-		return fmt.Errorf("credit wallet topup: %w", err)
+		return fmt.Errorf("credit wallet: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
 	}
 
 	slog.Info("stripe: wallet top-up credited",
 		"user_id", userID,
 		"amount_cents", amountCents,
+		"stripe_session_id", cs.ID,
 	)
 	return nil
 }
