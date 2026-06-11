@@ -431,6 +431,150 @@ func TestGetPendingSessionsReturnsAuthorized(t *testing.T) {
 	}
 }
 
+// TestAgentCannotOperateForeignSession verifies that an agent JWT for host A cannot
+// call StartSession or HeartbeatSession on a session that belongs to host B.
+// This is a regression test for the IDOR fix in StartSession/HeartbeatSession.
+func TestAgentCannotOperateForeignSession(t *testing.T) {
+	d := newTestDeps(t)
+	if d.cfg.StripeSecretKey != "" {
+		t.Skip("skipping dev-mode test: STRIPE_SECRET_KEY is set")
+	}
+
+	// Register user A (owns host A + creates a session)
+	emailA := "test_idor_a@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, emailA) })
+	regA, _ := json.Marshal(map[string]string{"email": emailA, "password": "password123", "name": "A"})
+	reqA := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regA))
+	reqA.Header.Set("Content-Type", "application/json")
+	wA := httptest.NewRecorder()
+	d.router.ServeHTTP(wA, reqA)
+	if wA.Code != http.StatusCreated {
+		t.Fatalf("register A: %d %s", wA.Code, wA.Body.String())
+	}
+	var rrA map[string]interface{}
+	json.NewDecoder(wA.Body).Decode(&rrA)
+	userTokenA := rrA["token"].(string)
+	userIDA := rrA["user_id"].(string)
+
+	// Register host A via the hosts/register endpoint to get an agent token
+	hostBodyA, _ := json.Marshal(map[string]interface{}{
+		"display_name": "Host A", "gpu_model": "RTX 4090", "vram_gb": 24,
+		"cpu_model": "i9", "ram_gb": 64, "os": "Windows 11",
+		"price_per_hour_cents": 600, "tags": []string{},
+	})
+	reqHA := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBodyA))
+	reqHA.Header.Set("Content-Type", "application/json")
+	reqHA.Header.Set("Authorization", "Bearer "+userTokenA)
+	wHA := httptest.NewRecorder()
+	d.router.ServeHTTP(wHA, reqHA)
+	if wHA.Code != http.StatusCreated {
+		t.Fatalf("register host A: %d %s", wHA.Code, wHA.Body.String())
+	}
+	var hrA map[string]interface{}
+	json.NewDecoder(wHA.Body).Decode(&hrA)
+	agentTokenA := hrA["agent_token"].(string)
+	hostIDA := hrA["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostIDA) })
+
+	// Register user B (owns host B)
+	emailB := "test_idor_b@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, emailB) })
+	regB, _ := json.Marshal(map[string]string{"email": emailB, "password": "password123", "name": "B"})
+	reqB := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regB))
+	reqB.Header.Set("Content-Type", "application/json")
+	wB := httptest.NewRecorder()
+	d.router.ServeHTTP(wB, reqB)
+	if wB.Code != http.StatusCreated {
+		t.Fatalf("register B: %d %s", wB.Code, wB.Body.String())
+	}
+	var rrB map[string]interface{}
+	json.NewDecoder(wB.Body).Decode(&rrB)
+	userTokenB := rrB["token"].(string)
+
+	// Register host B via endpoint
+	hostBodyB, _ := json.Marshal(map[string]interface{}{
+		"display_name": "Host B", "gpu_model": "RTX 3080", "vram_gb": 10,
+		"cpu_model": "i7", "ram_gb": 32, "os": "Windows 11",
+		"price_per_hour_cents": 600, "tags": []string{},
+	})
+	reqHB := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBodyB))
+	reqHB.Header.Set("Content-Type", "application/json")
+	reqHB.Header.Set("Authorization", "Bearer "+userTokenB)
+	wHB := httptest.NewRecorder()
+	d.router.ServeHTTP(wHB, reqHB)
+	if wHB.Code != http.StatusCreated {
+		t.Fatalf("register host B: %d %s", wHB.Code, wHB.Body.String())
+	}
+	var hrB map[string]interface{}
+	json.NewDecoder(wHB.Body).Decode(&hrB)
+	hostIDB := hrB["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostIDB) })
+
+	// Set host A online so user A can book it
+	onlineBody, _ := json.Marshal(map[string]bool{"online": true})
+	reqOn := httptest.NewRequest(http.MethodPut, "/v1/hosts/me/online", bytes.NewReader(onlineBody))
+	reqOn.Header.Set("Content-Type", "application/json")
+	reqOn.Header.Set("Authorization", "Bearer "+agentTokenA)
+	wOn := httptest.NewRecorder()
+	d.router.ServeHTTP(wOn, reqOn)
+	if wOn.Code != http.StatusOK {
+		t.Fatalf("set host A online: %d %s", wOn.Code, wOn.Body.String())
+	}
+
+	// User A creates a session on Host A (dev mode → AUTHORIZED)
+	sessBody, _ := json.Marshal(map[string]interface{}{"host_id": hostIDA, "duration_minutes": 15})
+	reqS := httptest.NewRequest(http.MethodPost, "/v1/sessions", bytes.NewReader(sessBody))
+	reqS.Header.Set("Content-Type", "application/json")
+	reqS.Header.Set("Authorization", "Bearer "+userTokenA)
+	_ = userIDA
+	wS := httptest.NewRecorder()
+	d.router.ServeHTTP(wS, reqS)
+	if wS.Code != http.StatusCreated {
+		t.Fatalf("create session: %d %s", wS.Code, wS.Body.String())
+	}
+	var sr map[string]interface{}
+	json.NewDecoder(wS.Body).Decode(&sr)
+	sessionID := sr["session_id"].(string)
+
+	// Get agent token for Host B
+	hostBodyBAgent, _ := json.Marshal(map[string]interface{}{
+		"display_name": "Host B2", "gpu_model": "RTX 3090", "vram_gb": 24,
+		"cpu_model": "i7", "ram_gb": 32, "os": "Windows 11",
+		"price_per_hour_cents": 600, "tags": []string{},
+	})
+	reqHB2 := httptest.NewRequest(http.MethodPost, "/v1/hosts/register", bytes.NewReader(hostBodyBAgent))
+	reqHB2.Header.Set("Content-Type", "application/json")
+	reqHB2.Header.Set("Authorization", "Bearer "+userTokenB)
+	wHB2 := httptest.NewRecorder()
+	d.router.ServeHTTP(wHB2, reqHB2)
+	if wHB2.Code != http.StatusCreated {
+		t.Fatalf("register host B2: %d %s", wHB2.Code, wHB2.Body.String())
+	}
+	var hrB2 map[string]interface{}
+	json.NewDecoder(wHB2.Body).Decode(&hrB2)
+	agentTokenB := hrB2["agent_token"].(string)
+	hostIDB2 := hrB2["host_id"].(string)
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostIDB2) })
+
+	// Agent B tries to start session belonging to Host A → must fail (no rows affected = 409)
+	reqStart := httptest.NewRequest(http.MethodPut, "/v1/sessions/"+sessionID+"/start", nil)
+	reqStart.Header.Set("Authorization", "Bearer "+agentTokenB)
+	wStart := httptest.NewRecorder()
+	d.router.ServeHTTP(wStart, reqStart)
+	if wStart.Code != http.StatusConflict {
+		t.Errorf("foreign agent start: expected 409, got %d: %s", wStart.Code, wStart.Body.String())
+	}
+
+	// Agent B tries to heartbeat session belonging to Host A → must return 404
+	reqHB3 := httptest.NewRequest(http.MethodPut, "/v1/sessions/"+sessionID+"/heartbeat", nil)
+	reqHB3.Header.Set("Authorization", "Bearer "+agentTokenB)
+	wHB3 := httptest.NewRecorder()
+	d.router.ServeHTTP(wHB3, reqHB3)
+	if wHB3.Code != http.StatusNotFound {
+		t.Errorf("foreign agent heartbeat: expected 404, got %d: %s", wHB3.Code, wHB3.Body.String())
+	}
+}
+
 // TestRateSession verifies session rating updates host aggregate and prevents double-rating.
 func TestRateSession(t *testing.T) {
 	d := newTestDeps(t)
