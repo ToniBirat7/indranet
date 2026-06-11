@@ -349,3 +349,53 @@ func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"sessions": sessions})
 }
+
+// GetPendingSessions returns AUTHORIZED sessions assigned to this host agent.
+// Called by the host agent on startup and periodically to discover new sessions.
+// Uses agent JWT auth — the host ID is extracted from the token claim.
+func (h *Handlers) GetPendingSessions(w http.ResponseWriter, r *http.Request) {
+	hostID, _ := r.Context().Value(ctxKeyUserID).(string)
+	if hostID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	rows, err := h.deps.Pool.Query(r.Context(), `
+		SELECT id, user_id, rate_per_minute_cents, pre_auth_minutes, created_at
+		FROM sessions
+		WHERE host_id = $1 AND state = 'AUTHORIZED'
+		ORDER BY created_at ASC
+	`, hostID)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type pendingSession struct {
+		SessionID          string      `json:"session_id"`
+		UserID             string      `json:"user_id"`
+		RatePerMinuteCents int64       `json:"rate_per_minute_cents"`
+		PreAuthMinutes     int         `json:"pre_auth_minutes"`
+		CreatedAt          interface{} `json:"created_at"`
+	}
+
+	var pending []pendingSession
+	for rows.Next() {
+		var s pendingSession
+		if err := rows.Scan(
+			&s.SessionID, &s.UserID, &s.RatePerMinuteCents,
+			&s.PreAuthMinutes, &s.CreatedAt,
+		); err != nil {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		pending = append(pending, s)
+	}
+	if pending == nil {
+		pending = []pendingSession{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"sessions": pending})
+}
