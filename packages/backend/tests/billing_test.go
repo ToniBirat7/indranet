@@ -126,6 +126,46 @@ func TestBillingWarningAtThreshold(t *testing.T) {
 	}
 }
 
+// TestBillingFinalTickCapped verifies that when balance < rate, the charged amount
+// is capped at balance_cents (not rate), leaving balance at exactly 0.
+// This exercises the LEAST(balance_cents, rate) CTE in processSessionTick.
+func TestBillingFinalTickCapped(t *testing.T) {
+	d := newTestDeps(t)
+
+	const rate int64 = 100
+	const balance int64 = 40 // less than one full tick
+
+	userID, sessionID := billingTestSetup(t, d.pool, balance, rate)
+
+	d.engine.Tick()
+
+	var newBalance, totalCharged int64
+	var tickAmount int64
+	d.pool.QueryRow(context.Background(),
+		`SELECT balance_cents FROM users WHERE id = $1`, userID).Scan(&newBalance)
+	d.pool.QueryRow(context.Background(),
+		`SELECT total_charged_cents FROM sessions WHERE id = $1`, sessionID).Scan(&totalCharged)
+	d.pool.QueryRow(context.Background(),
+		`SELECT amount_cents FROM billing_ticks WHERE session_id = $1`, sessionID).Scan(&tickAmount)
+
+	if newBalance != 0 {
+		t.Errorf("balance: want 0, got %d", newBalance)
+	}
+	if totalCharged != balance {
+		t.Errorf("total_charged_cents: want %d (balance), got %d", balance, totalCharged)
+	}
+	if tickAmount != balance {
+		t.Errorf("billing_tick amount_cents: want %d (capped), got %d", balance, tickAmount)
+	}
+
+	var state string
+	d.pool.QueryRow(context.Background(),
+		`SELECT state FROM sessions WHERE id = $1`, sessionID).Scan(&state)
+	if state != "ENDING" {
+		t.Errorf("session should be ENDING after balance exhausted, got %q", state)
+	}
+}
+
 // TestBillingTransactionAtomicity verifies balance deduction, tick insertion, and
 // session total update all commit together (happy path).
 func TestBillingTransactionAtomicity(t *testing.T) {

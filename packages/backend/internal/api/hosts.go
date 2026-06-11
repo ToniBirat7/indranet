@@ -201,8 +201,8 @@ func (h *Handlers) RegisterHost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "string fields must be ≤80 characters", http.StatusBadRequest)
 		return
 	}
-	if req.PricePerHourCents <= 0 || req.PricePerHourCents > 100_000 { // max $1000/hr
-		http.Error(w, "price_per_hour_cents must be between 1 and 100000", http.StatusBadRequest)
+	if req.PricePerHourCents < 60 || req.PricePerHourCents > 100_000 { // min 60¢/hr = 1¢/min; max $1000/hr
+		http.Error(w, "price_per_hour_cents must be between 60 and 100000", http.StatusBadRequest)
 		return
 	}
 	if req.VRAMgb < 0 || req.VRAMgb > 1024 || req.RAMgb < 0 || req.RAMgb > 4096 {

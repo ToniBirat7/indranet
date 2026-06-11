@@ -89,6 +89,10 @@ func (h *Handlers) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ratePerMinuteCents := pricePerHourCents / 60
+	if ratePerMinuteCents <= 0 {
+		http.Error(w, "host price is too low to bill per minute", http.StatusConflict)
+		return
+	}
 
 	var sessionID string
 	err = tx.QueryRow(r.Context(), `

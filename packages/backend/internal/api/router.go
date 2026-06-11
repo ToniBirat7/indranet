@@ -88,7 +88,7 @@ func NewRouter(deps RouterDeps) http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * 1000000000)) // 60s
+	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(corsMiddleware(deps.Config.FrontendBaseURL))
 	r.Use(securityHeadersMiddleware)
 	r.Use(maxBodyMiddleware)
