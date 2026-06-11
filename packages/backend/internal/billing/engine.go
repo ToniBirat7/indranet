@@ -96,7 +96,6 @@ type activeSession struct {
 	SessionID          string
 	UserID             string
 	RatePerMinuteCents int64
-	BalanceCents       int64
 }
 
 func (e *Engine) tick() {
@@ -104,9 +103,8 @@ func (e *Engine) tick() {
 	defer cancel()
 
 	rows, err := e.pool.Query(ctx, `
-		SELECT s.id, s.user_id, s.rate_per_minute_cents, u.balance_cents
+		SELECT s.id, s.user_id, s.rate_per_minute_cents
 		FROM sessions s
-		JOIN users u ON u.id = s.user_id
 		WHERE s.state = 'ACTIVE'
 	`)
 	if err != nil {
@@ -118,7 +116,7 @@ func (e *Engine) tick() {
 	var sessions []activeSession
 	for rows.Next() {
 		var s activeSession
-		if err := rows.Scan(&s.SessionID, &s.UserID, &s.RatePerMinuteCents, &s.BalanceCents); err != nil {
+		if err := rows.Scan(&s.SessionID, &s.UserID, &s.RatePerMinuteCents); err != nil {
 			slog.Error("billing: scan error", "error", err)
 			continue
 		}
@@ -131,14 +129,14 @@ func (e *Engine) tick() {
 
 	slog.Debug("billing tick", "active_sessions", len(sessions))
 	for _, s := range sessions {
-		e.processSessionTick(ctx, s.SessionID, s.UserID, s.RatePerMinuteCents, s.BalanceCents)
+		e.processSessionTick(ctx, s.SessionID, s.UserID, s.RatePerMinuteCents)
 	}
 }
 
 // processSessionTick executes billing for a single session inside a DB transaction.
 // Atomicity guarantee: balance deduction, tick record, and session total update either
 // all succeed or all roll back — no partial billing.
-func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID string, ratePerMinuteCents, _ int64) {
+func (e *Engine) processSessionTick(ctx context.Context, sessionID, userID string, ratePerMinuteCents int64) {
 	tx, err := e.pool.Begin(ctx)
 	if err != nil {
 		slog.Error("billing: begin tx failed", "session_id", sessionID, "error", err)
