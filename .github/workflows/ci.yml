@@ -111,6 +111,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  typecheck-ts:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Type-check shared + web
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            node:20-alpine \
+            sh -c "corepack enable && \
+                   pnpm install --frozen-lockfile && \
+                   pnpm --filter @indranet/shared run type-check && \
+                   pnpm --filter @indranet/web exec tsc --noEmit"
+
   build-web:
     name: Build Web
     runs-on: ubuntu-latest
