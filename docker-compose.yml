@@ -166,6 +166,9 @@ services:
     env_file:
       - .env
     environment:
+      # API_URL: server-to-server (inside Docker network); used by Server Components
+      API_URL: http://backend-dev:8080
+      # NEXT_PUBLIC_API_URL: browser-facing; used by client components
       NEXT_PUBLIC_API_URL: http://localhost:8080
     ports:
       - "3000:3000"
@@ -206,6 +209,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      API_URL: http://backend:8080
     ports:
       - "3000:3000"
     depends_on:

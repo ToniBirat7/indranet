@@ -20,7 +20,9 @@ const PAGE_SIZE = 20
 
 // Server Component — fetches hosts from the Go API on the server.
 export default async function HostGrid({ searchParams }: Props) {
-  const apiURL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
+  // API_URL is for server-to-server calls inside Docker (e.g. http://backend:8080).
+  // NEXT_PUBLIC_API_URL is the browser-facing URL. Fall back for local dev without containers.
+  const apiURL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
 
   const page = Math.max(1, parseInt(searchParams?.page ?? '1', 10) || 1)
   const params = new URLSearchParams()
