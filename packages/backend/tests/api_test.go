@@ -431,6 +431,98 @@ func TestGetPendingSessionsReturnsAuthorized(t *testing.T) {
 	}
 }
 
+// TestRateSession verifies session rating updates host aggregate and prevents double-rating.
+func TestRateSession(t *testing.T) {
+	d := newTestDeps(t)
+	if d.cfg.StripeSecretKey != "" {
+		t.Skip("skipping dev-mode test: STRIPE_SECRET_KEY is set")
+	}
+
+	email := "test_rate_session@indranet.test"
+	t.Cleanup(func() { cleanupTestUser(t, d.pool, email) })
+
+	// Register user
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "password123", "name": "Rater",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	d.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register: %d %s", w.Code, w.Body.String())
+	}
+	var rr map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&rr)
+	token := rr["token"].(string)
+	userID := rr["user_id"].(string)
+
+	// Create host
+	var hostID string
+	if err := d.pool.QueryRow(context.Background(), `
+		INSERT INTO hosts (user_id, display_name, gpu_model, vram_gb, cpu_model,
+		                   ram_gb, os, price_per_hour_cents, online)
+		VALUES ($1, 'RateHost', 'RTX 4090', 24, 'Intel i9', 64, 'Windows 11', 600, true)
+		RETURNING id`, userID,
+	).Scan(&hostID); err != nil {
+		t.Fatalf("create host: %v", err)
+	}
+	t.Cleanup(func() { cleanupTestHost(t, d.pool, hostID) })
+
+	// Create session (dev mode → AUTHORIZED)
+	sessBody, _ := json.Marshal(map[string]interface{}{"host_id": hostID, "duration_minutes": 15})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/sessions", bytes.NewReader(sessBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	d.router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("create session: %d %s", w2.Code, w2.Body.String())
+	}
+	var sr map[string]interface{}
+	json.NewDecoder(w2.Body).Decode(&sr)
+	sessionID := sr["session_id"].(string)
+
+	// Manually move session to ENDED
+	if _, err := d.pool.Exec(context.Background(),
+		`UPDATE sessions SET state = 'ENDED', ended_at = NOW() WHERE id = $1`, sessionID,
+	); err != nil {
+		t.Fatalf("set session ended: %v", err)
+	}
+
+	// Submit rating
+	rateBody, _ := json.Marshal(map[string]int{"stars": 4})
+	req3 := httptest.NewRequest(http.MethodPost, "/v1/sessions/"+sessionID+"/rate", bytes.NewReader(rateBody))
+	req3.Header.Set("Content-Type", "application/json")
+	req3.Header.Set("Authorization", "Bearer "+token)
+	w3 := httptest.NewRecorder()
+	d.router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("rate: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+
+	// Verify host aggregate updated
+	var ratingSum, ratingCount int
+	if err := d.pool.QueryRow(context.Background(),
+		`SELECT rating_sum, rating_count FROM hosts WHERE id = $1`, hostID,
+	).Scan(&ratingSum, &ratingCount); err != nil {
+		t.Fatalf("fetch host: %v", err)
+	}
+	if ratingSum != 4 || ratingCount != 1 {
+		t.Errorf("host rating: want sum=4 count=1, got sum=%d count=%d", ratingSum, ratingCount)
+	}
+
+	// Double-rate must fail with 409
+	req4 := httptest.NewRequest(http.MethodPost, "/v1/sessions/"+sessionID+"/rate", bytes.NewReader(rateBody))
+	req4.Header.Set("Content-Type", "application/json")
+	req4.Header.Set("Authorization", "Bearer "+token)
+	w4 := httptest.NewRecorder()
+	d.router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusConflict {
+		t.Errorf("double-rate: expected 409, got %d", w4.Code)
+	}
+}
+
 // TestRegisterRejectsInvalidEmail verifies that registration rejects malformed emails.
 func TestRegisterRejectsInvalidEmail(t *testing.T) {
 	d := newTestDeps(t)
