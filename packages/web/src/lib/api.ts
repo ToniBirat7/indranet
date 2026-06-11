@@ -17,6 +17,25 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
+export interface UserProfile {
+  user_id: string
+  email: string
+  name: string
+  role: string
+  balance_cents: number
+  host_id?: string
+}
+
+export interface SessionSummary {
+  session_id: string
+  host_id: string
+  state: string
+  rate_per_minute_cents: number
+  total_charged_cents: number
+  started_at: string | null
+  created_at: string
+}
+
 export const api = {
   hosts: {
     list: (params?: Record<string, string>) => {
@@ -24,8 +43,30 @@ export const api = {
       return apiFetch<{ hosts: unknown[]; total: number }>(`/hosts${qs}`)
     },
     get: (id: string) => apiFetch<unknown>(`/hosts/${id}`),
+    register: (
+      body: {
+        display_name: string
+        gpu_model: string
+        vram_gb: number
+        cpu_model: string
+        ram_gb: number
+        os: string
+        price_per_hour_cents: number
+        tags: string[]
+      },
+      token: string,
+    ) =>
+      apiFetch<{ host_id: string; agent_token: string }>('/hosts/register', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      }),
   },
   sessions: {
+    list: (token: string) =>
+      apiFetch<{ sessions: SessionSummary[] }>('/sessions', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     create: (body: { host_id: string; duration_minutes: number }, token: string) =>
       apiFetch<{ session_id: string; state: string; checkout_url?: string }>('/sessions', {
         method: 'POST',
@@ -33,12 +74,24 @@ export const api = {
         body: JSON.stringify(body),
       }),
     get: (id: string, token: string) =>
-      apiFetch<unknown>(`/sessions/${id}`, {
+      apiFetch<{
+        session_id: string
+        state: string
+        rate_per_minute_cents: number
+        balance_remaining_minutes: number
+        total_charged_cents: number
+      }>(`/sessions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     end: (id: string, token: string) =>
       apiFetch<{ state: string }>(`/sessions/${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+  },
+  users: {
+    me: (token: string) =>
+      apiFetch<UserProfile>('/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       }),
   },

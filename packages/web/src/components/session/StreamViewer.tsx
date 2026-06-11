@@ -1,17 +1,26 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { getToken } from '@/lib/auth'
+
+type SessionEvent = {
+  type: 'session_warning'
+  minutes_remaining: number
+} | {
+  type: 'session_kill' | 'session_failed' | string
+  reason?: string
+  minutes_remaining?: number
+}
 
 interface Props {
   sessionId: string
   signalingUrl: string
+  onSessionEvent?: (event: SessionEvent) => void
 }
 
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error'
 
-// StreamViewer handles the WebRTC peer connection and renders the remote video stream.
-// It also opens a data channel for sending keyboard/mouse/gamepad input to the host.
-export default function StreamViewer({ sessionId, signalingUrl }: Props) {
+export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -21,20 +30,19 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
   useEffect(() => {
     connect()
     return () => disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, signalingUrl])
 
   async function connect() {
     setState('connecting')
     setError(null)
 
-    // TODO: Connect to signaling WebSocket
-    const wsUrl = `${signalingUrl}?role=viewer&token=${getSessionToken()}`
+    const token = getToken() ?? ''
+    const wsUrl = `${signalingUrl}?role=viewer${token ? `&token=${token}` : ''}`
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
-    ws.onopen = () => {
-      setupPeerConnection(ws)
-    }
+    ws.onopen = () => setupPeerConnection(ws)
 
     ws.onerror = () => {
       setError('Failed to connect to signaling server')
@@ -42,23 +50,16 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
     }
 
     ws.onclose = () => {
-      if (state === 'connected') {
-        setError('Connection lost')
-        setState('error')
-      }
+      setState((prev) => (prev === 'connected' ? 'error' : prev))
     }
   }
 
   function setupPeerConnection(ws: WebSocket) {
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        // TODO: Add TURN server config from environment
-      ],
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     })
     pcRef.current = pc
 
-    // Handle incoming media tracks (video + audio from host)
     pc.ontrack = (event) => {
       if (videoRef.current && event.streams[0]) {
         videoRef.current.srcObject = event.streams[0]
@@ -66,7 +67,6 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
       }
     }
 
-    // ICE candidate relay via signaling server
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         ws.send(JSON.stringify({ type: 'ice_candidate', candidate: event.candidate }))
@@ -80,25 +80,32 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
       }
     }
 
-    // TODO: Open data channel for input events
-    // const inputChannel = pc.createDataChannel('input', { ordered: false })
-    // inputChannel.onopen = () => startInputCapture(inputChannel)
-
-    // Handle incoming SDP offer from host agent (relayed via signaling server)
     ws.onmessage = async (event) => {
-      const msg = JSON.parse(event.data)
+      let msg: Record<string, unknown>
+      try {
+        msg = JSON.parse(event.data as string)
+      } catch {
+        return
+      }
 
-      if (msg.type === 'offer') {
-        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: msg.sdp }))
-        const answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-        ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }))
-      } else if (msg.type === 'ice_candidate') {
-        await pc.addIceCandidate(new RTCIceCandidate(msg.candidate))
-      } else if (msg.type === 'session_kill') {
-        // Billing exhausted or host terminated session
-        setError('Session ended by host or balance exhausted')
-        setState('error')
+      switch (msg.type) {
+        case 'offer': {
+          await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp as string })
+          const answer = await pc.createAnswer()
+          await pc.setLocalDescription(answer)
+          ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }))
+          break
+        }
+        case 'ice_candidate':
+          if (msg.candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate as RTCIceCandidateInit))
+          }
+          break
+        case 'session_kill':
+        case 'session_failed':
+        case 'session_warning':
+          onSessionEvent?.(msg as unknown as SessionEvent)
+          break
       }
     }
   }
@@ -106,14 +113,7 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
   function disconnect() {
     pcRef.current?.close()
     wsRef.current?.close()
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-  }
-
-  function getSessionToken(): string {
-    // TODO: Get JWT from auth context or localStorage
-    return ''
+    if (videoRef.current) videoRef.current.srcObject = null
   }
 
   if (state === 'error') {
@@ -121,10 +121,7 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
       <div className="flex items-center justify-center h-full bg-gray-950 text-white">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-4">{error ?? 'Connection error'}</p>
-          <button
-            onClick={connect}
-            className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg"
-          >
+          <button onClick={connect} className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg">
             Retry
           </button>
         </div>
@@ -132,12 +129,12 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
     )
   }
 
-  if (state === 'connecting') {
+  if (state !== 'connected') {
     return (
       <div className="flex items-center justify-center h-full bg-gray-950 text-white">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-400">Connecting to host...</p>
+          <p className="text-gray-400">Connecting to host…</p>
         </div>
       </div>
     )
@@ -149,7 +146,6 @@ export default function StreamViewer({ sessionId, signalingUrl }: Props) {
       autoPlay
       playsInline
       className="w-full h-full object-contain bg-black cursor-none"
-      // TODO: Attach pointer lock + keyboard/mouse event listeners
     />
   )
 }

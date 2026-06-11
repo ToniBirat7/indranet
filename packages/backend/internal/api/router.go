@@ -50,10 +50,14 @@ func NewRouter(deps RouterDeps) http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(h.AuthMiddleware)
 
+			// User profile
+			r.Get("/users/me", h.GetMe)
+
 			// Host management
 			r.Post("/hosts/register", h.RegisterHost)
 
 			// Sessions
+			r.Get("/sessions", h.ListSessions)
 			r.Post("/sessions", h.CreateSession)
 			r.Get("/sessions/{id}", h.GetSession)
 			r.Delete("/sessions/{id}", h.EndSession)

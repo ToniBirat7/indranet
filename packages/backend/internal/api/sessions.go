@@ -276,3 +276,51 @@ func (h *Handlers) HeartbeatSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"action": action})
 }
+
+// ListSessions returns the authenticated user's session history (newest first).
+func (h *Handlers) ListSessions(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(ctxKeyUserID).(string)
+
+	rows, err := h.deps.Pool.Query(r.Context(), `
+		SELECT id, host_id, state, rate_per_minute_cents, total_charged_cents,
+		       started_at, created_at
+		FROM sessions
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT 20
+	`, userID)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type sessionSummary struct {
+		ID                 string             `json:"session_id"`
+		HostID             string             `json:"host_id"`
+		State              models.SessionState `json:"state"`
+		RatePerMinuteCents int64              `json:"rate_per_minute_cents"`
+		TotalChargedCents  int64              `json:"total_charged_cents"`
+		StartedAt          interface{}        `json:"started_at"`
+		CreatedAt          interface{}        `json:"created_at"`
+	}
+
+	var sessions []sessionSummary
+	for rows.Next() {
+		var s sessionSummary
+		if err := rows.Scan(
+			&s.ID, &s.HostID, &s.State, &s.RatePerMinuteCents,
+			&s.TotalChargedCents, &s.StartedAt, &s.CreatedAt,
+		); err != nil {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		sessions = append(sessions, s)
+	}
+	if sessions == nil {
+		sessions = []sessionSummary{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"sessions": sessions})
+}

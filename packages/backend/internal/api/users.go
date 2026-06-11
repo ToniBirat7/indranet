@@ -206,3 +206,35 @@ func (h *Handlers) jwtKeyFunc(t *jwt.Token) (interface{}, error) {
 	}
 	return []byte(h.deps.Config.JWTSecret), nil
 }
+
+// GetMe returns the authenticated user's profile, balance, and host ID (if registered as host).
+func (h *Handlers) GetMe(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(ctxKeyUserID).(string)
+
+	var id, email, name, role string
+	var balanceCents int64
+	var hostID *string
+	err := h.deps.Pool.QueryRow(r.Context(), `
+		SELECT u.id, u.email, u.name, u.role, u.balance_cents,
+		       (SELECT id FROM hosts WHERE user_id = u.id LIMIT 1)
+		FROM users u WHERE u.id = $1
+	`, userID).Scan(&id, &email, &name, &role, &balanceCents, &hostID)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	resp := map[string]interface{}{
+		"user_id":       id,
+		"email":         email,
+		"name":          name,
+		"role":          role,
+		"balance_cents": balanceCents,
+	}
+	if hostID != nil {
+		resp["host_id"] = *hostID
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
