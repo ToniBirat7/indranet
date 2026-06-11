@@ -1,37 +1,60 @@
-'use client'
+import { useState, FormEvent } from 'react'
 
-import { useState } from 'react'
+interface Props {
+  onConnect: (sessionId: string) => void
+}
 
-export default function UserMode() {
+export default function UserMode({ onConnect }: Props) {
   const [sessionId, setSessionId] = useState('')
 
+  function handleConnect(e: FormEvent) {
+    e.preventDefault()
+    if (sessionId.trim()) onConnect(sessionId.trim())
+  }
+
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">User Mode</h1>
-      <p className="text-gray-400 mb-6">
+    <div style={{ padding: '2rem', maxWidth: '42rem', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>User Mode</h1>
+      <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
         Browse the marketplace at{' '}
-        <a href="#" className="text-blue-400 hover:underline">
+        <a href="https://indranet.io" style={{ color: '#60a5fa' }} target="_blank" rel="noreferrer">
           indranet.io
         </a>{' '}
         and paste your session ID below to connect.
       </p>
 
-      <div className="flex gap-3">
+      <form onSubmit={handleConnect} style={{ display: 'flex', gap: '0.75rem' }}>
         <input
           type="text"
-          placeholder="Session ID"
+          placeholder="Session ID (e.g. ses_abc123...)"
           value={sessionId}
           onChange={(e) => setSessionId(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm"
+          style={{
+            flex: 1,
+            background: '#1f2937',
+            border: '1px solid #4b5563',
+            borderRadius: '0.375rem',
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.875rem',
+            color: 'white',
+          }}
         />
         <button
-          disabled={!sessionId}
-          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded"
+          type="submit"
+          disabled={!sessionId.trim()}
+          style={{
+            background: '#2563eb',
+            color: 'white',
+            padding: '0.5rem 1.25rem',
+            borderRadius: '0.375rem',
+            border: 'none',
+            cursor: sessionId.trim() ? 'pointer' : 'not-allowed',
+            opacity: sessionId.trim() ? 1 : 0.5,
+          }}
         >
           Connect
         </button>
-      </div>
-      {/* TODO: Navigate to /session/<id> view when connected */}
+      </form>
     </div>
   )
 }

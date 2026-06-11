@@ -75,3 +75,5 @@ logs/
 # Compiled binaries in poc
 poc/*/build/
 poc/*/bin/
+poc/02-webrtc-stream/server/poc-02-signal
+poc/04-payment-gate/server/poc-04-payment
