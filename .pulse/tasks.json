@@ -160,6 +160,56 @@
       "createdAt": "2026-06-11T06:18:28.867835+00:00",
       "updatedAt": "2026-06-11T06:18:28.867836+00:00",
       "note": null
+    },
+    {
+      "id": "m:add-env-example-with-all-required-env-vars-docum",
+      "title": "Add .env.example with all required env vars documented",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T07:12:38.222589+00:00",
+      "updatedAt": "2026-06-11T07:12:38.222600+00:00",
+      "note": null
+    },
+    {
+      "id": "m:add-e2e-test-wallet-topup-flow-with-mock-stripe-",
+      "title": "Add e2e test: wallet topup flow with mock Stripe webhook",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T07:12:38.222610+00:00",
+      "updatedAt": "2026-06-11T07:12:38.222612+00:00",
+      "note": null
+    },
+    {
+      "id": "m:add-billingtimer-tick-display-to-session-page",
+      "title": "Add BillingTimer tick display to session page",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T07:12:38.222618+00:00",
+      "updatedAt": "2026-06-11T07:12:38.222619+00:00",
+      "note": null
+    },
+    {
+      "id": "m:poc-01-screen-capture-at-60fps-windows-only-defe",
+      "title": "PoC 01: screen capture at 60fps — Windows-only, deferred",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T07:12:38.222627+00:00",
+      "updatedAt": "2026-06-11T07:12:38.222629+00:00",
+      "note": null
+    },
+    {
+      "id": "m:poc-03-windows-sandbox-launch-windows-only-defer",
+      "title": "PoC 03: Windows Sandbox launch — Windows-only, deferred",
+      "status": "todo",
+      "source": "machine",
+      "locked": false,
+      "createdAt": "2026-06-11T07:12:38.222634+00:00",
+      "updatedAt": "2026-06-11T07:12:38.222635+00:00",
+      "note": null
     }
   ]
 }
