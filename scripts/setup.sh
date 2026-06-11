@@ -1,42 +1,39 @@
 #!/usr/bin/env bash
+# First-time setup: generates lockfiles (if missing) and starts the dev stack.
+# Requires only Docker — no local Go, Node, or pnpm needed.
 set -euo pipefail
 
-echo "=== IndraNet Dev Environment Setup ==="
+REPO="$(git rev-parse --show-toplevel)"
+cd "$REPO"
 
-# Check dependencies
-command -v go >/dev/null 2>&1 || { echo "ERROR: Go is not installed"; exit 1; }
-command -v node >/dev/null 2>&1 || { echo "ERROR: Node.js is not installed"; exit 1; }
-command -v pnpm >/dev/null 2>&1 || { echo "ERROR: pnpm is not installed (npm i -g pnpm)"; exit 1; }
+echo "=== IndraNet Dev Environment Setup (Docker-only) ==="
+
 command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker is not installed"; exit 1; }
+command -v git    >/dev/null 2>&1 || { echo "ERROR: git is not installed"; exit 1; }
 
-echo "✓ Dependencies found"
+echo "✓ Docker found"
 
-# Copy env file
+# Create .env from example if missing
 if [ ! -f .env ]; then
   cp .env.example .env
-  echo "✓ Created .env from .env.example — edit with your secrets"
+  echo "✓ Created .env from .env.example — edit with your secrets before starting"
 fi
 
-# Install JS/TS dependencies
-pnpm install
-echo "✓ pnpm packages installed"
+# Generate lockfiles if they don't exist (uses Docker — no local tooling)
+MISSING_LOCKFILES=0
+[ ! -f packages/backend/go.sum ] && MISSING_LOCKFILES=1
+[ ! -f pnpm-lock.yaml ]          && MISSING_LOCKFILES=1
 
-# Install Go dependencies
-cd packages/backend && go mod download && cd ../..
-echo "✓ Go modules downloaded"
-
-# Start local services
-docker compose up -d
-echo "✓ docker-compose services started (postgres, redis, nats, minio)"
-
-# Run DB migrations
-echo "Waiting for postgres to be ready..."
-sleep 3
-cd packages/backend && make migrate && cd ../..
-echo "✓ Database migrations applied"
+if [ "$MISSING_LOCKFILES" -eq 1 ]; then
+  echo "Generating lockfiles via Docker (this runs once)..."
+  bash scripts/gen-lockfiles.sh
+fi
 
 echo ""
 echo "=== Setup complete! ==="
-echo "  Backend:  cd packages/backend && make dev"
-echo "  Web:      cd packages/web && pnpm dev"
-echo "  Client:   cd packages/client && pnpm dev"
+echo ""
+echo "Start the dev stack:"
+echo "  bash scripts/dev.sh"
+echo ""
+echo "Or start infra only:"
+echo "  docker compose up -d postgres redis nats minio"
