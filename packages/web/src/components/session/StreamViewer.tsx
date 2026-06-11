@@ -107,6 +107,7 @@ export default function StreamViewer({ sessionId, signalingUrl, onSessionEvent }
             catch (e) { console.warn('addIceCandidate failed', e) }
           }
           break
+        case 'session_state':
         case 'session_kill':
         case 'session_failed':
         case 'session_warning':

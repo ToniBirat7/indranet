@@ -37,6 +37,7 @@ export default function SessionPage({ params }: { params: { id: string } }) {
   const [paymentBanner, setPaymentBanner] = useState(paymentStatus === 'success')
   const [rating, setRating] = useState(0)
   const [ratingSubmitted, setRatingSubmitted] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     if (!paymentBanner) return
@@ -85,10 +86,15 @@ export default function SessionPage({ params }: { params: { id: string } }) {
 
     poll()
     return () => { active = false }
-  }, [params.id, router, paymentStatus])
+  // refreshTrigger: incremented by session_state WebSocket event to skip the 2s polling delay
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id, router, paymentStatus, refreshTrigger])
 
   const handleBillingEvent = useCallback((event: BillingEvent) => {
-    if (event.type === 'session_warning' && event.minutes_remaining !== undefined) {
+    if (event.type === 'session_state') {
+      // Host agent transitioned session to ACTIVE — trigger immediate re-poll instead of waiting 2s
+      setRefreshTrigger((n) => n + 1)
+    } else if (event.type === 'session_warning' && event.minutes_remaining !== undefined) {
       setMinutesRemaining(event.minutes_remaining)
       setWarning(true)
     } else if (event.type === 'session_kill') {

@@ -47,6 +47,7 @@ export type SignalMessage =
   | { type: 'answer'; sdp: string }
   | { type: 'ice_candidate'; candidate: RTCIceCandidateInit }
   | { type: 'session_authorized'; session_id: string }
+  | { type: 'session_state'; state: SessionState }
   | { type: 'session_kill'; reason: string }
   | { type: 'session_failed'; reason: string }
   | { type: 'session_warning'; minutes_remaining: number }
