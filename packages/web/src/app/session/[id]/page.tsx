@@ -32,6 +32,7 @@ export default function SessionPage({ params }: { params: { id: string } }) {
   const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null)
   const [warning, setWarning] = useState(false)
   const [ended, setEnded] = useState(false)
+  const [endReason, setEndReason] = useState<string | null>(null)
   const [paymentBanner, setPaymentBanner] = useState(paymentStatus === 'success')
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export default function SessionPage({ params }: { params: { id: string } }) {
 
         if (s.state === 'ENDED' || s.state === 'FAILED') {
           setEnded(true)
+          if (s.state === 'FAILED') setEndReason('Session failed to start or was terminated unexpectedly.')
           return
         }
         if (s.state !== 'ACTIVE') {
@@ -86,7 +88,15 @@ export default function SessionPage({ params }: { params: { id: string } }) {
     if (event.type === 'session_warning' && event.minutes_remaining !== undefined) {
       setMinutesRemaining(event.minutes_remaining)
       setWarning(true)
-    } else if (event.type === 'session_kill' || event.type === 'session_failed') {
+    } else if (event.type === 'session_kill') {
+      if (event.reason === 'balance_exhausted') setEndReason('Your balance ran out.')
+      setEnded(true)
+    } else if (event.type === 'session_failed') {
+      const reasons: Record<string, string> = {
+        agent_timeout: 'The host took too long to start the session.',
+        payment_failed: 'Payment was not completed.',
+      }
+      setEndReason(reasons[event.reason ?? ''] ?? 'Session failed unexpectedly.')
       setEnded(true)
     }
   }, [])
@@ -109,7 +119,7 @@ export default function SessionPage({ params }: { params: { id: string } }) {
       <div className="flex items-center justify-center h-screen bg-gray-950 text-white">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Session ended</h2>
-          <p className="text-gray-400 mb-6">Your session has finished.</p>
+          <p className="text-gray-400 mb-6">{endReason ?? 'Your session has finished.'}</p>
           <button
             onClick={() => router.push('/dashboard')}
             className="bg-brand-600 hover:bg-brand-700 px-6 py-2 rounded-lg"
