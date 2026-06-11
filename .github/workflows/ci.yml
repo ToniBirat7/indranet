@@ -126,7 +126,7 @@ jobs:
             sh -c "corepack enable && \
                    pnpm install --frozen-lockfile && \
                    pnpm --filter @indranet/shared run type-check && \
-                   pnpm --filter @indranet/web exec tsc --noEmit"
+                   pnpm --filter @indranet/web run type-check"
 
   build-web:
     name: Build Web

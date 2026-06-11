@@ -12,6 +12,12 @@ RUN pnpm install --frozen-lockfile --filter @indranet/web...
 # Build
 FROM base AS builder
 WORKDIR /app
+# NEXT_PUBLIC_* vars are inlined at build time — must be declared as ARG+ENV
+# so `next build` embeds the correct API URL in the client bundle.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8080
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 COPY pnpm-workspace.yaml package.json turbo.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
