@@ -1,9 +1,33 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/ToniBirat7/indranet/packages/backend/internal/models"
 )
+
+type contextKey string
+
+const (
+	ctxKeyUserID contextKey = "user_id"
+	ctxKeyRole   contextKey = "role"
+)
+
+type jwtClaims struct {
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+	jwt.RegisteredClaims
+}
 
 // Register creates a new user account.
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +40,6 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		http.Error(w, "email, password, and name are required", http.StatusBadRequest)
 		return
@@ -26,16 +49,41 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Hash password with bcrypt
-	// TODO: INSERT INTO users (email, password_hash, name) VALUES (...)
-	// TODO: Generate JWT
-	// TODO: Handle duplicate email (UNIQUE constraint violation)
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var user models.User
+	err = h.deps.Pool.QueryRow(r.Context(),
+		`INSERT INTO users (email, password_hash, name)
+		 VALUES ($1, $2, $3)
+		 RETURNING id, email, name, role, balance_cents, created_at`,
+		req.Email, string(hash), req.Name,
+	).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &user.BalanceCents, &user.CreatedAt)
+	if err != nil {
+		if strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "unique") {
+			http.Error(w, "email already registered", http.StatusConflict)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	token, err := h.generateUserJWT(user.ID, user.Role)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"user_id": "usr_TODO",
-		"token":   "TODO_JWT",
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user_id": user.ID,
+		"email":   user.Email,
+		"name":    user.Name,
+		"token":   token,
 	})
 }
 
@@ -50,33 +98,111 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: SELECT user by email
-	// TODO: bcrypt.CompareHashAndPassword
-	// TODO: Generate JWT
+	var user models.User
+	err := h.deps.Pool.QueryRow(r.Context(),
+		`SELECT id, email, password_hash, name, role FROM users WHERE email = $1`,
+		req.Email,
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := h.generateUserJWT(user.ID, user.Role)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	expiresAt := time.Now().Add(time.Duration(h.deps.Config.JWTExpiryHours) * time.Hour)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"token":      "TODO_JWT",
-		"expires_at": "2025-06-01T00:00:00Z",
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"token":      token,
+		"user_id":    user.ID,
+		"expires_at": expiresAt,
 	})
 }
 
 // AuthMiddleware validates the JWT bearer token on protected routes.
 func (h *Handlers) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Extract Authorization: Bearer <jwt> header
-		// TODO: Parse and validate JWT with h.deps.Config.JWTSecret
-		// TODO: Add user claims to request context
-		// TODO: Return 401 if token is missing or invalid
-		next.ServeHTTP(w, r)
+		authHeader := r.Header.Get("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "missing or invalid authorization header", http.StatusUnauthorized)
+			return
+		}
+		claims := &jwtClaims{}
+		_, err := jwt.ParseWithClaims(strings.TrimPrefix(authHeader, "Bearer "), claims, h.jwtKeyFunc)
+		if err != nil {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), ctxKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, ctxKeyRole, claims.Role)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 // AgentAuthMiddleware validates the agent JWT on agent-only routes.
 func (h *Handlers) AgentAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Extract and validate agent JWT (has "agent" role claim)
-		// TODO: Verify the agent_token_hash in the hosts table matches
-		next.ServeHTTP(w, r)
+		authHeader := r.Header.Get("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "missing or invalid authorization header", http.StatusUnauthorized)
+			return
+		}
+		claims := &jwtClaims{}
+		_, err := jwt.ParseWithClaims(strings.TrimPrefix(authHeader, "Bearer "), claims, h.jwtKeyFunc)
+		if err != nil || claims.Role != "agent" {
+			http.Error(w, "invalid agent token", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), ctxKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, ctxKeyRole, claims.Role)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (h *Handlers) generateUserJWT(userID, role string) (string, error) {
+	expiry := time.Duration(h.deps.Config.JWTExpiryHours) * time.Hour
+	claims := &jwtClaims{
+		UserID: userID,
+		Role:   role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(h.deps.Config.JWTSecret))
+}
+
+func (h *Handlers) generateAgentJWT(hostID string) (string, error) {
+	claims := &jwtClaims{
+		UserID: hostID,
+		Role:   "agent",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:  hostID,
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(h.deps.Config.JWTSecret))
+}
+
+func (h *Handlers) jwtKeyFunc(t *jwt.Token) (interface{}, error) {
+	if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+	}
+	return []byte(h.deps.Config.JWTSecret), nil
 }

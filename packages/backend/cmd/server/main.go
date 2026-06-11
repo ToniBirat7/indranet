@@ -48,6 +48,12 @@ func main() {
 	defer pool.Close()
 	slog.Info("postgres connected")
 
+	if err := db.RunMigrations(ctx, pool); err != nil {
+		slog.Error("migrations failed", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("migrations applied")
+
 	rdb, err := db.ConnectRedis(ctx, cfg.RedisURL)
 	if err != nil {
 		slog.Error("failed to connect to redis", "error", err)

@@ -6,8 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/webhook"
+
+	"github.com/ToniBirat7/indranet/packages/backend/internal/signaling"
 )
 
 // StripeWebhook handles incoming Stripe webhook events.
@@ -83,12 +87,29 @@ func (h *Handlers) handleCheckoutComplete(event stripe.Event) error {
 	return nil
 }
 
+var wsUpgrader = websocket.Upgrader{
+	ReadBufferSize:  4096,
+	WriteBufferSize: 4096,
+	CheckOrigin:    func(r *http.Request) bool { return true },
+}
+
 // Signal handles WebSocket connections for WebRTC signaling.
-// Clients connect with ?role=host|viewer and exchange SDP offer/answer and ICE candidates.
+// ?role=host|viewer — the hub relays messages between the two participants.
 func (h *Handlers) Signal(w http.ResponseWriter, r *http.Request) {
-	// TODO: Validate JWT token from query param
-	// TODO: Extract session_id from URL path
-	// TODO: Upgrade to WebSocket
-	// TODO: Create signaling.Client and start ReadPump/WritePump goroutines
-	http.Error(w, "TODO: implement WebSocket signaling", http.StatusNotImplemented)
+	sessionID := chi.URLParam(r, "sessionID")
+	role := r.URL.Query().Get("role")
+	if role != "host" && role != "viewer" {
+		http.Error(w, "role must be 'host' or 'viewer'", http.StatusBadRequest)
+		return
+	}
+
+	conn, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error("websocket upgrade failed", "session_id", sessionID, "error", err)
+		return
+	}
+
+	client := signaling.NewClient(h.deps.Hub, conn, sessionID, role)
+	go client.WritePump()
+	client.ReadPump()
 }
