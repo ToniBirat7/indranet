@@ -21,12 +21,14 @@ COPY packages/web ./packages/web
 RUN pnpm --filter @indranet/web build
 
 # Production runner (standalone output)
+# standalone/ contains server.js at its root; the server uses __dirname to locate
+# static assets, so they must be at .next/static and public/ relative to server.js.
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/packages/web/.next/standalone ./
-COPY --from=builder /app/packages/web/.next/static ./packages/web/.next/static
-COPY --from=builder /app/packages/web/public ./packages/web/public
+COPY --from=builder /app/packages/web/.next/static ./.next/static
+COPY --from=builder /app/packages/web/public ./public
 EXPOSE 3000
 ENV PORT=3000
 CMD ["node", "server.js"]
